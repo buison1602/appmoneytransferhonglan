@@ -1,10 +1,20 @@
-Hướng dẫn cài đặt:
-Cài đặt: [dotnet restore]
-Chạy: [dotnet run hoặc nhấn run ở vscode]
+### Hướng dẫn Cài đặt
 
+* **Cài đặt các gói phụ thuộc (dependencies):**
+    ```bash
+    dotnet restore
+    ```
+* **Chạy dự án:**
+    ```bash
+    dotnet run
+    ```
+    *(Hoặc bạn có thể nhấn nút Run/Debug trong Visual Studio / VS Code)*
 
-Thông tin login
-Agent name: Red Sun
-Agent ID: CA01
-user name: hiennguyen
-password: Khanhngoc0410@
+---
+
+### Thông tin Đăng nhập (Tài khoản test)
+
+* **Agent name:** `Red Sun`
+* **Agent ID:** `CA01`
+* **Username:** `hiennguyen`
+* **Password:** `Khanhngoc0410@`
