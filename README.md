@@ -1,6 +1,6 @@
 Hướng dẫn cài đặt:
 Cài đặt: [dotnet restore]
-Chạy: [dotnet run]
+Chạy: [dotnet run hoặc nhấn run ở vscode]
 
 
 Thông tin login
