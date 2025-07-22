@@ -1,0 +1,613 @@
+﻿@page "/Customer/HistoryCustomer"
+<PageTitle>History Customer</PageTitle>
+@attribute [Authorize]
+@*@inject GetReportService getReportService;*@
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+@inject IJSRuntime JS;
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration;
+@inject NavigationManager NavManager
+@inject BrowserService Service
+@inject Blazored.Toast.Services.IToastService toastService;
+<!-- Start Content-->
+<div class="container-fluid" style="padding-left: 0px!important;padding-right: 15px!important;background:white!important;background-color:white!important;max-height:@MaxHeightBody!important;height:@MaxHeightBody!important;">
+    <div class="row" style="padding-bottom: 2px!important;padding-top:15px!important">
+        <div class="col-8">
+            <h3 class="header-title" style=" margin-bottom: 5px;color: #16617!important;padding-left: 10px!important;">History Customer</h3>
+           
+        </div>
+        <div class="col-4">
+            <button type="button" class="btn btn-primary" @onclick="ExportExcel" disabled=@isExportExcel style="width:200px!important">
+                Export Excel
+                @if (isExportExcel)
+                {
+                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                }
+            </button>
+        </div>
+    </div>
+    @if (@isView)
+    {
+      <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                  <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;;max-height:@MaxHeight!important;height:@MaxHeight!important;">
+
+                <table class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important">
+                                        <thead>
+                                <tr> @* @if (AuthService.userMTRedSun.AgentID.ToString() == "CA01")
+                                        { *@
+                                    <th style="width: 20px !important;"></th>
+                                      @*   } *@
+                                    <th>No</th>
+                                    <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Trans ID</span></div></th>
+                                  @*  <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Trans Date</span></div></th>*@
+                                    <th>Sender</th>
+                                  @*  <th>Address</th>
+                                    <th>Phone</th>*@
+                                    <th>Recipient</th>
+                                  @*  <th>Address</th>
+                                    <th>Phone</th>*@
+                                    <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">To Country</span></div></th>
+                                    <th>Amount</th>
+                                    <th>Reorder</th>
+                                    <th width="150px"><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">New Recipient</span></div></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in HistoryCustomerSendList)
+                                {
+                                    <tr>
+                                       @*  @if (AuthService.userMTRedSun.AgentID.ToString() == "CA01")
+                                        { *@
+                                        <td style="width: 20px !important;padding-left: 15px;padding-right: 15px;text-align:center!important">
+                                           
+                                                <span class="emp_name text-truncate">
+                                                    @if (item.DisableAmount)
+                                                    {
+                                                        <a target="_blank" href="@item.linkTransID" class="btn btn-link" style="padding-left:0px!important"><i class="fas fa-edit" /></a>
+                                                    }
+                                                </span>
+                                           
+                                        </td>
+                                       @*  } *@
+                                    <td>@item.RowNumber</td>
+                                   <td> <div class="d-flex justify-content-start align-items-center user-name">
+                <div class="d-flex flex-column">
+
+                                                    <span class="emp_name text-truncate fw-semibold">
+                                                      
+                                                                                   @item.TRANS_ID
+                                                                           </span>
+                                                    @if (!string.IsNullOrEmpty(item.CN_TRANS_NO))
+                                                    {
+                                                        <small class="emp_name text-truncate"> @item.CN_TRANS_NO</small>
+                                                    }
+                    <small class="emp_post text-truncate">@item.TRANS_DATE</small>
+                   
+                </div>
+            </div></td>
+                                   @* <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate">@item.TRANS_DATE</span>
+                                        </div></td>*@
+                                         <td> <div class="d-flex flex-column">
+                    <span class="emp_name text-truncate fw-semibold"> @item.FULLNAME</span>
+                    <small class="emp_post text-muted">@item.S_FULLADDRESS</small>
+                    <small class="emp_post text-truncate">@item.PHONE1</small>
+                     @* <small class="emp_post text-truncate">@item.B_COUNTRY</small>*@
+                </div></td>
+                                   @* <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate fw-semibold"> @item.FULLNAME</span>
+                                        </div></td>*@
+
+                                   @* <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate"> @item.S_FULLADDRESS</span>
+                                        </div></td>
+                                    <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate"> @item.PHONE1</span>
+                                        </div></td>*@
+                                    <td> <div class="d-flex flex-column">
+                    <span class="emp_name text-truncate fw-semibold"> @item.B_FULLNAME</span>
+                    <small class="emp_post text-muted">@item.R_FULLADDRESS</small>
+                    <small class="emp_post text-truncate">@item.B_PHONE1</small>
+                     @* <small class="emp_post text-truncate">@item.B_COUNTRY</small>*@
+                </div></td>
+                                  @*  <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate"> @item.R_FULLADDRESS</span>
+                                        </div></td>
+                                    <td><div class="d-flex flex-column">
+                                            <span class="emp_name text-truncate"> @item.B_PHONE1</span>
+                                        </div></td>*@
+                                    <td style="text-align:center!important">@item.B_COUNTRY</td>
+                                    <td style="text-align:right!important">
+                                            @if (item.DisableAmount)
+                                            {
+                                                @String.Format("{0:n2}",@item.AMOUNT)
+                                            }
+                                           
+                                        </td>
+                                    <td style="text-align:center!important">
+                                            @if ((item.StatusNameBlock.ToUpper().Contains("ALLOW") || item.StatusNameBlock.ToUpper().Contains("ACTIVE")) && (item.StatusName.ToUpper().Contains("ALLOW") || item.StatusName.ToUpper().Contains("ACTIVE")))
+                                            {
+                                                <a href="@item.ReOrder"  class="btn btn-link" >Reorder</a>
+
+                                            }
+                                        </td>
+                                        <td style="text-align:center!important;width:220px!important">
+                                            @if (item.StatusNameBlock.ToUpper().Contains("ALLOW") || item.StatusNameBlock.ToUpper().Contains("ACTIVE"))
+                                            {
+                                                  <div style="float: left; width: 100%; padding-left: 5px">
+                                                    <div style="float: left; width: 65%; padding-left: 0px!important; text-align: left!important; color: #818181!important">
+                                                        <select class="did-floating-input" @onchange="eventArgs => { EnableButton(item, eventArgs.Value); }" aria-label="Floating label select example" style="padding-top: 5px !important; padding-left: 10px !important; height: 35px !important;width:100%!important">
+                                                            @if (ReceiveCountryList != null)
+                                                            {
+                                                                @foreach (var country in ReceiveCountryList)
+                                                                {
+                                                                    <option value="@country.CountryCode">@country.CountryName</option>
+                                                                }
+
+                                                            }
+
+                                                        </select>
+                                                    </div>
+                                                    <div style="float: left; width: 35%; padding-left: 5px; color: #818181!important">
+                                                        @if (item.DisableButton)
+                                                        {
+                                                            <a href="@item.NewLink" class="btn btn-link">New Country</a>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            }
+
+                                    </td>
+
+
+
+                                </tr>}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row" style="padding-top:2px!important;padding-bottom:2px!important;">
+                                             <div class="col-sm-12 col-md-6"  style="float:right!important">
+                                                <div class="dataTables_paginate paging_simple_numbers" id="basic-datatable_paginate" style="padding-right:10px!important;color: #166178!important">
+                                                    <button class="btn btn-customer"  @onclick="@(async()=> await NavigateToPage("first"))">First</button>
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("prev"))">Prev</button>
+                                                    @for (int i = startPage; i <= endPage; i++)
+                                                    {
+                                                        var currentPage = i;
+                                <button class="btn btn-customer @(currentPage==curPage?"btn-danger":"")"   @onclick="@(async()=> await RefreshRecord(currentPage))"> @i</button>}
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("next"))">Next</button>
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("last"))">Last</button>
+                                                </div>
+                                               
+                                            </div>
+                                            
+                                             <div class="col-sm-12 col-md-3 float-left"  style="float:center!important">
+                                                <div class="dataTables_length" id="basic-datatable_length" style="padding-top:10px!important">
+                                                     @noidungpage
+                                                     </div>
+                                            </div>
+                                             <div class="col-sm-12 col-md-3" style="float:left!important">
+                                                <div class="dataTables_length" id="basic-datatable_length">
+
+                                                    <select name="basic-datatable_length" aria-controls="basic-datatable" class="form-select-pagesize" value="@pageSize" aria-label="Floating label select example" @onchange="ChangepageSize">
+                                                        @foreach (var pagesize in pagesizeModels)
+                                                        {
+                                    <option value="@pagesize.PageID">@pagesize.PageName</option>
+}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                           
+                                           
+                                        </div>
+    }
+
+
+
+</div>
+
+@code{
+    public class Model
+    {
+        public string?  CustID { get; set; } = "";
+        public string?  UserID { get; set; } = "";
+        public string?  ToCountry { get; set; } = "";
+
+    }
+    List<pageSizeModel> pagesizeModels = new List<pageSizeModel>
+    {
+        new pageSizeModel { PageID = 10, PageName = "10" },
+        new pageSizeModel { PageID = 20, PageName = "20" },
+        new pageSizeModel { PageID = 50, PageName = "50" },
+        new pageSizeModel { PageID = 100, PageName = "100" },
+        new pageSizeModel { PageID = 200, PageName = "200" },
+        new pageSizeModel { PageID = 500, PageName = "500" },
+        new pageSizeModel { PageID = 1000, PageName = "1000" },
+        new pageSizeModel { PageID = 2000, PageName = "2000" },
+        new pageSizeModel { PageID = 5000, PageName = "5000" },
+        new pageSizeModel { PageID = 500000, PageName = "All" }
+    };
+    private bool isViewingReport = false;
+    private bool isView = false;
+    string Noidung = "";
+    ReponseTable[] ReponseTables = new ReponseTable[] { };
+    ReponseTable1[] ReponseTable1s = new ReponseTable1[] { };
+
+    private string ToastPosition = "Right";
+    private string ToastContent = "";
+
+    private string ToastTitle = "";
+    private string ToastCSS = "";
+    private string ToastIcon = "";
+    private dynamic dates = new Array[] { };
+    private dynamic partners = new Array[] { };
+    private dynamic provinces = new Array[] { };
+    private dynamic branchs = new Array[] { };
+    private dynamic employees = new Array[] { };
+    private dynamic currencies = new Array[] { };
+    private dynamic paymentMethods = new Array[] { };
+    private dynamic batchs = new Array[] { };
+    private dynamic emailStatuses = new Array[] { };
+    private dynamic statuses = new Array[] { };
+    private dynamic searchs = new Array[] { };
+
+    private string isViewingSender = "None";
+    private string disabled = "disabled";
+    private dynamic reports = null;
+    private dynamic Table = new Array[] { };
+    private dynamic Table1 = new Array[] { };
+    private dynamic Table2 = new Array[] { };
+    private string error = "";
+    public int Height { get; set; } = 800; public int HeightBody { get; set; } = 800;
+    public String MaxHeight { get; set; } = "500px"; public String MaxHeightBody { get; set; } = "800px";
+    private Model model = new Model();
+
+    public List<ReceiveCountryList> ReceiveCountryList { get; set; }= new List<ReceiveCountryList>();
+    ReceiveCountryList ReceiveCountryLists { get; set; }
+    private string ReceiveCountrylist { get; set; }
+    private string CustIDHis { get; set; } = "";
+    List<ReportTranSummary> reportSummaryHisList = new List<ReportTranSummary>();
+    public List<HistoryCustomerSendTran> HistoryCustomerSendList { get; set; } = new List<HistoryCustomerSendTran>();
+    public List<HistoryCustomerSendTran> HistoryCustomerSendAllList { get; set; } = new List<HistoryCustomerSendTran>();
+    public List<CustomerList> CustomerList { get; set; } = new List<CustomerList>();
+
+    public List<CustomerComboList> CustomerComboList { get; set; }
+    string pagename = "/Customer/HistoryCustomer";
+    public List<MenuChildList> menuChildLists { get; set; } = new List<MenuChildList>();
+    string noidungpage = "";
+    int totalPages;
+    Int64 totalRecords;
+    Int64 curPage;
+    int pagerSize;
+    Int64 pageSize;
+    int startPage;
+    int endPage;
+    int firstPage;
+    int lastPage;
+    bool isExportExcel = false;
+    protected async void ExportExcel()
+    {
+        try
+        {
+            isExportExcel = true; StateHasChanged();
+            StateHasChanged();
+            dynamic payload = new
+            {
+                Form = "/Customer/HistoryCustomer",
+                FormName = "History Customer",
+                Action = "/Customer/HistoryCustomerSend",
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                CustID = CustIDHis,
+                AgentID = AuthService.userMTRedSun.AgentID.ToString(),
+                pageIndex = 1,
+                pageSize = 50000
+            };
+
+            HistoryCustomerSendResp resp = await HttpService.Post<HistoryCustomerSendResp>("/Customer/HistoryCustomerSend", payload);
+            if (resp.Status == 200)
+            {
+                HistoryCustomerSendAllList = resp.Content.HistoryCustomerSend;
+                var xls = new Excel();
+                await xls.ExportSenderHistory(JS, HistoryCustomerSendAllList, "HistorySender.xlsx");
+                this.StateHasChanged();
+                toastService.ShowSuccess("Export data successful!");
+            }
+            else
+            {
+                isViewingSender = "none";
+                HistoryCustomerSendAllList = new List<HistoryCustomerSendTran>();
+                isView = false;
+            }
+            StateHasChanged();
+
+          
+
+           
+
+        }
+        catch (Exception ex)
+        {
+            isExportExcel = false;
+            // error = ex.Message;
+            //ToastCSS = "e-toast-warning";
+            //ToastIcon = "e-warning toast-icons";
+            //ToastContent = ex.Message;
+            //ToastTitle = "Thông báo";
+            //await this.ToastObj.ShowAsync();
+        }
+
+        isExportExcel = false;
+        StateHasChanged();
+    }
+    protected async Task ChangepageSize(ChangeEventArgs e)
+    {
+        pageSize = Convert.ToInt64(e.Value.ToString());
+        curPage = 1;
+        pagerSize = 5;
+        startPage = 1;
+        endPage = 0;
+
+        await getData();
+        await SetPageSize("forward");
+        await refreshNoidung();
+        StateHasChanged();
+    }
+    public async Task NavigateToPage(string direction)
+    {
+        switch (direction)
+        {
+            case "first":
+                SetPageSize("first");
+                curPage = startPage;
+                break;
+            case "next":
+                if (curPage < totalPages)
+                {
+                    if (curPage == endPage)
+                    {
+                        SetPageSize("forward");
+                    }
+                    curPage += 1;
+                }
+                break;
+            case "prev":
+                if (curPage > 1)
+                {
+                    if (curPage == startPage)
+                    {
+                        SetPageSize("back");
+                    }
+                    curPage -= 1;
+
+                }
+                break;
+            default:
+                SetPageSize("last");
+                curPage = totalPages;
+                break;
+        }
+
+        RefreshRecord(curPage);
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task refreshNoidung()
+    {
+        this.StateHasChanged();
+        Int64 Totalre = curPage * pageSize;
+        if (Totalre > totalRecords)
+        {
+            Totalre = totalRecords;
+        }
+        noidungpage = "Showing " + (((curPage - 1) * pageSize) + 1).ToString() + " to " + Totalre + " of " + totalRecords + " entries";
+        this.StateHasChanged();
+    }
+    public async Task SetPageSize(string direction)
+    {
+        this.StateHasChanged();
+        if (direction == "forward" && endPage < totalPages)
+        {
+            startPage = endPage + 1;
+            if (endPage + pagerSize < totalPages)
+            {
+                endPage = startPage + pagerSize - 1;
+            }
+            else
+            {
+                endPage = totalPages;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage == endPage)
+            {
+                startPage = endPage - pagerSize + 1;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+        }
+        else if (direction == "back" && startPage > 1)
+        {
+            startPage = startPage - 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "first")
+        {
+            startPage = 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "last")
+        {
+            startPage = totalPages - pagerSize + 1;
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            endPage = totalPages;
+
+        }
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task RefreshRecord(Int64 currentPage)
+    {
+        curPage = currentPage;
+        await getData();
+        await refreshNoidung();
+
+        this.StateHasChanged();
+    }
+    public void EnableButton(HistoryCustomerSendTran item, object checkedValue)
+    {
+        if (checkedValue.ToString().Contains("Select"))
+        {
+            item.DisableButton = false;
+            item.NewLink = "";
+        }
+        else
+        {
+            item.DisableButton = true;
+            item.NewLink = "/Transaction/NewTransaction?Custid=" +item.CUST_ID + "&BCustid=&fc=US" + "&tc=" +checkedValue.ToString().ToString();
+        }
+        StateHasChanged();
+    }
+    protected async void ViewReport()
+    {
+        try
+        {
+            pageSize = 50;
+            curPage = 1;
+            pagerSize = 5;
+            startPage = 1;
+            endPage = 0;
+            await getData();
+            await SetPageSize("forward");
+            await refreshNoidung();
+           
+            StateHasChanged();
+
+
+
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError(ex.Message);
+        }
+
+        isViewingReport = false;
+        StateHasChanged();
+    }
+    public async Task getData(string Form = "", string FormName = "", string Action = "")
+    {
+        StateHasChanged();
+        dynamic payload = new
+        {
+            Form = "/Customer/HistoryCustomer",
+            FormName = "History Customer",
+            Action = "/Customer/HistoryCustomerSend",
+            UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CustID = CustIDHis,
+            AgentID = AuthService.userMTRedSun.AgentID.ToString(),
+            pageIndex = curPage,
+            pageSize = pageSize
+        };
+
+        HistoryCustomerSendResp resp = await HttpService.Post<HistoryCustomerSendResp>("/Customer/HistoryCustomerSend", payload);
+        if (resp.Status == 200)
+        {
+            HistoryCustomerSendList = resp.Content.HistoryCustomerSend;
+            reportSummaryHisList = resp.Content.ReportSummary;
+
+            totalRecords = reportSummaryHisList[0].NoofTran;
+            this.StateHasChanged();
+            totalPages = (int)Math.Ceiling(totalRecords / (decimal)pageSize);
+            isViewingSender = "display";
+            isView = true;
+            this.StateHasChanged();
+        }
+        else
+        {
+            isViewingSender = "none";
+            HistoryCustomerSendList = new List<HistoryCustomerSendTran>();
+            isView = false;
+        }
+        StateHasChanged();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            menuChildLists = AuthService.userMTRedSun.MenuChildList.ToList();
+            if (menuChildLists.Count > 0)
+            {
+                List<MenuChildList> menuChildList = new List<MenuChildList>();
+                menuChildList = menuChildLists.Where(x => x.LinkPageColor == pagename).ToList();
+                if (menuChildList.Count == 0)
+                {
+                    toastService.ShowWarning("This function is not authorized!", "Warning");
+                    await AuthService.Logout();
+                }
+            }
+
+            var dimension = await Service.GetDimensions();
+            Height = dimension.Height+78 - 212;
+            if (Height <= 200)
+            {
+                Height = 200;
+            }
+            MaxHeight = Height.ToString() + "px"; 
+            HeightBody = dimension.Height - 63; 
+            MaxHeightBody = HeightBody.ToString() + "px";
+            isViewingSender = "None";
+            this.StateHasChanged();
+            isViewingSender = "None";
+            CustIDHis = NavManager.QueryString("id");
+            ReceiveCountryList = AuthService.userMTRedSun.ReceiveCountryList.ToList();
+            ReceiveCountryLists = ReceiveCountryList.FirstOrDefault();
+            model.ToCountry = ReceiveCountryLists.CountryCode.ToString();
+            model.UserID = AuthService.userMTRedSun.Id.ToString();
+            // get id from query string
+
+            ViewReport();
+
+            this.StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            
+        }
+        
+    }
+
+    
+}

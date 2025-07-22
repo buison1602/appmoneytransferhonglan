@@ -1,0 +1,239 @@
+﻿@page "/Customer/HistoryRecipient"
+<PageTitle>History Recipient</PageTitle>
+@attribute [Authorize]
+@*@inject GetReportService getReportService;*@
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+@inject IJSRuntime JS;
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration;
+@inject NavigationManager NavManager
+@inject BrowserService Service
+@inject Blazored.Toast.Services.IToastService toastService;
+<!-- Start Content-->
+<div class="container-fluid" style="padding-left: 0px!important;padding-right: 15px!important;background:white!important;background-color:white!important;max-height:@MaxHeightBody!important;height:@MaxHeightBody!important;">
+    <div class="row" style="padding-bottom: 2px!important;padding-top:15px!important">
+        <div class="col-12" >
+            <h3 class="header-title" style=" margin-bottom: 5px;color: #16617!important;padding-left: 10px!important;">History Recipient</h3>
+
+        </div>
+    </div>
+
+  <div class="row">
+                        <div class="col-12">
+                             <div class="card">
+                                  <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;;max-height:@MaxHeight!important;height:@MaxHeight!important;">
+
+                <table class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important">
+                                       
+                        <thead>
+
+                            <tr>
+                                 <th>No</th>
+                                <th><div class="d-flex flex-column">
+                        <span class="emp_name text-truncate">Trans ID
+                        </span>
+                        </div></th>
+                                <th><div class="d-flex flex-column">
+                        <span class="emp_name text-truncate">Sender
+                        </span>
+                        </div></th>
+                                <th><div class="d-flex flex-column">
+                        <span class="emp_name text-truncate">Recipient
+                        </span>
+                        </div></th>
+                           
+                                <th><div class="d-flex flex-column">
+                        <span class="emp_name text-truncate">To Country
+                        </span>
+                        </div></th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody> 
+                            
+                            @if (HistoryCustomerSendList != null)
+                            {
+                                @foreach (var item in HistoryCustomerSendList)
+                                {
+                                    <tr>
+                                        <td>@item.RowNumber</td>
+                                        <td> 
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate fw-semibold"> @item.TRANS_ID</span>
+                                                    <small class="emp_post text-truncate">@item.TRANS_DATE</small>
+                                                </div>
+                                           </td>
+                                        <td> <div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate fw-semibold"> @item.FULLNAME</span>
+                                               @*  <small class="emp_post text-muted">@item.S_FULLADDRESS</small>
+                                                <small class="emp_post text-truncate">@item.PHONE1</small> *@
+                                            </div></td>
+                                        <td> <div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate fw-semibold"> @item.B_FULLNAME</span>
+                                                <small class="emp_post text-muted">@item.R_FULLADDRESS</small>
+                                                <small class="emp_post text-truncate">@item.B_PHONE1</small>
+                                            </div></td>
+                                        <td style="text-align:center!important">@item.B_COUNTRY</td>
+                                        <td style="text-align:right!important">@String.Format("{0:n2}",@item.AMOUNT)</td>
+
+                                       @*  <td style="text-align:center!important">
+                                            @if ((@item.StatusNameBlock.ToUpper().Contains("ALLOW") || @item.StatusNameBlock.ToUpper().Contains("ACTIVE")) && (@item.StatusName.ToUpper().Contains("ALLOW") || @item.StatusName.ToUpper().Contains("ACTIVE")))
+                                            {
+                                                <a href="@item.ReOrder"  class="btn btn-link" >Reorder</a>
+                                            }
+                                        </td> *@
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+</div>
+
+@code{
+    public class Model
+    {
+        public string?  CustID { get; set; } = "";
+        public string?  UserID { get; set; } = "";
+        public string?  ToCountry { get; set; } = "";
+
+    }
+
+    string Noidung = "";
+    ReponseTable[] ReponseTables = new ReponseTable[] { };
+    ReponseTable1[] ReponseTable1s = new ReponseTable1[] { };
+    public List<HistoryCustomerSendTran> HistoryCustomerSendList { get; set; }
+    private string ToastPosition = "Right";
+    private string ToastContent = "";
+
+    private string ToastTitle = "";
+    private string ToastCSS = "";
+    private string ToastIcon = "";
+    private dynamic dates = new Array[] { };
+    private dynamic partners = new Array[] { };
+    private dynamic provinces = new Array[] { };
+    private dynamic branchs = new Array[] { };
+    private dynamic employees = new Array[] { };
+    private dynamic currencies = new Array[] { };
+    private dynamic paymentMethods = new Array[] { };
+    private dynamic batchs = new Array[] { };
+    private dynamic emailStatuses = new Array[] { };
+    private dynamic statuses = new Array[] { };
+    private dynamic searchs = new Array[] { };
+
+    private string isViewingSender = "None";
+    private bool isViewingReport = false;
+    private dynamic reports = null;
+    private dynamic Table = new Array[] { };
+    private dynamic Table1 = new Array[] { };
+    private dynamic Table2 = new Array[] { };
+    private string error = "";
+
+    private Model model = new Model();
+
+    public List<ReceiveCountryList> ReceiveCountryList { get; set; }= new List<ReceiveCountryList>();
+    ReceiveCountryList ReceiveCountryLists { get; set; }
+    private string ReceiveCountrylist { get; set; }
+
+    public List<CustomerList> CustomerList { get; set; } = new List<CustomerList>();
+
+    public List<CustomerComboList> CustomerComboList { get; set; }
+
+    public int Height { get; set; } = 800; public int HeightBody { get; set; } = 800;
+    public String MaxHeight { get; set; } = "500px"; public String MaxHeightBody { get; set; } = "800px";
+    string pagename = "/Customer/HistoryRecipient";
+    public List<MenuChildList> menuChildLists { get; set; } = new List<MenuChildList>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthService.userMTRedSun == null)
+        {
+            await AuthService.Logout();
+        }
+        else
+        {
+             menuChildLists = AuthService.userMTRedSun.MenuChildList.ToList();
+            if (menuChildLists.Count > 0)
+            {
+                List<MenuChildList> menuChildList = new List<MenuChildList>();
+                menuChildList = menuChildLists.Where(x => x.LinkPageColor == pagename).ToList();
+                if (menuChildList.Count == 0)
+                {
+                    toastService.ShowWarning("This function is not authorized!", "Warning");
+                    await AuthService.Logout();
+                }
+            }
+
+            var dimension = await Service.GetDimensions();
+            Height = dimension.Height+78 - 152;
+            if (Height <= 200)
+            {
+                Height = 200;
+            }
+            MaxHeight = Height.ToString() + "px"; HeightBody = dimension.Height - 63; MaxHeightBody = HeightBody.ToString() + "px";
+            isViewingSender = "None";
+            isViewingSender = "None";
+            var CustID = NavManager.QueryString("id");
+            ReceiveCountryList = AuthService.userMTRedSun.ReceiveCountryList.ToList();
+            ReceiveCountryLists = ReceiveCountryList.FirstOrDefault();
+            model.ToCountry = ReceiveCountryLists.CountryCode.ToString();
+            model.UserID = AuthService.userMTRedSun.Id.ToString();
+
+
+            dynamic payload = new
+            {
+                Form = "/Customer/HistoryRecipient",
+                FormName = "History Recipient",
+                Action = "/Customer/HistoryRecipient",
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                AgentID =  AuthService.userMTRedSun.AgentID == null ? "" : AuthService.userMTRedSun.AgentID.ToString(),
+                UserID = model.UserID,
+                BCustID = CustID,
+                pageIndex = 1,
+                pageSize = 50
+            };
+
+
+            HistoryCustomerSendResp resp = await HttpService.Post<HistoryCustomerSendResp>("/Customer/HistoryRecipient", payload);
+            if (resp.Status == 200)
+            {
+                HistoryCustomerSendList = resp.Content.HistoryCustomerSend;
+                isViewingSender = "display";
+
+            }
+            else
+            {
+                isViewingSender = "none";
+                HistoryCustomerSendList = new List<HistoryCustomerSendTran>();
+            }
+        }
+
+    }
+
+    protected async void ViewReport()
+    {
+        try
+        {
+            isViewingReport = true;
+            Table1 = new Array[] { };
+            error = "";
+
+            StateHasChanged();
+
+
+
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+
+        isViewingReport = false;
+        StateHasChanged();
+    } 
+}

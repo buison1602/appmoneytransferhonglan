@@ -1,0 +1,100 @@
+﻿<!-- ========== Left Sidebar Start ========== -->
+@inject BrowserService Service
+@inject IAuthService AuthService;
+<link href="https://use.fontawesome.com/releases/v5.14.0/css/all.css" rel="stylesheet">
+<aside id="layout-menu" class="layout-menu menu-vertical menu bg-menu-theme" data-bg-class="bg-menu-theme">
+    <div class="app-brand demo" style="background: black;height: 75px!important;">
+        <a href="index.html" class="app-brand-link">
+            <span><img src="/assets/img/logo.png" alt="" height="65px!important"></span>
+            @*<div>
+                    <div class="row">
+                        <span class="app-brand-text demo menu-text fw-bold ms-4" style="font-size: larger !important;">Red Sun</span>
+                    </div>
+                    <div class="row">
+                        <span class="app-brand-text demo menu-text fw-bold ms-2" style="font-size: span !important; padding-left: 40px !important ">Services</span>
+                    </div>
+                </div>*@
+
+
+        </a>
+
+        <a href="javascript:void(0);" class="layout-menu-toggle menu-link text-large ms-auto">
+            <i class="bx menu-toggle-icon d-none d-xl-block fs-4 align-middle"></i>
+            <i class="bx bx-x d-block d-xl-none bx-sm align-middle"></i>
+        </a>
+    </div>
+    <div class="shadow-bottom"></div>
+    <div class="main-menu-content" style=";max-height:@MaxHeight!important;height:@MaxHeight!important;overflow:auto!important">
+        <ul class="menu-inner py-1 ps ps--scrolling-y">
+            <MudPaper Class="d-inline-flex py-3" Elevation="0">
+                <MudNavMenu Class="mud-width-full">
+                    <MudText Typo="Typo.h6" Class="px-4">MENU</MudText>
+                    @*<MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Icons</MudText>*@
+                    <MudDivider Class="my-0" /> 
+                    @foreach(var itemparent in AuthService.userMTRedSun.MenuParentList.ToList())
+                    {
+                        List<MenuChildList> MenuChildLists = AuthService.userMTRedSun.MenuChildList.Where(x => x.MenuNameParent == itemparent.MenuNameParent).OrderBy(x=>x.STT).ToList();
+                        <MudNavGroup Title="@itemparent.MenuNameParent" Icon="@itemparent.Icon" Expanded="@itemparent.GroupP" Style="font-weight:500!important;color:black!important">
+                            @foreach(var item in MenuChildLists)
+                                {
+                                    <MudNavLink Href="@item.LinkPageColor" Icon="@item.Icon">@item.MenuNameChild</MudNavLink>
+                                }
+                         </MudNavGroup>
+                    }
+                </MudNavMenu>
+            </MudPaper>
+    </ul>
+    </div>
+</aside>
+@inject IJSRuntime JS;
+@code
+{
+    public int Height { get; set; }
+  
+    public String MaxHeight { get; set; } = "500px";
+    protected override async Task OnInitializedAsync()
+    {
+        if(AuthService.userMTRedSun==null)
+        {
+            await AuthService.Logout();
+        }
+        else
+        {
+            var dimension = await Service.GetDimensions();
+            Height = dimension.Height - 110;
+            if (Height <= 500)
+            {
+                Height = 500;
+            }
+            MaxHeight = Height.ToString() + "px";
+        }
+      
+       
+        // await JS.InvokeVoidAsync("runScript");
+    }
+    // protected override async void OnAfterRender(bool firstRender)
+    //{
+    //    if (firstRender)
+    //    {
+    //        await JS.InvokeVoidAsync("runScript");
+    //    }
+    //}
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("runScript");
+        }      
+    }
+    //protected override Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    JS.InvokeVoidAsync("runScript");
+    //    return base.OnAfterRenderAsync(firstRender);
+    //}
+
+
+}
+   
+
+
+    <!-- Left Sidebar End -->

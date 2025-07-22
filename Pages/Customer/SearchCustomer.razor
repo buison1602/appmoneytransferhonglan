@@ -1,0 +1,3873 @@
+﻿@page "/Customer/SearchCustomer"
+<PageTitle>Search Customer</PageTitle>
+@attribute [Authorize]
+@*@inject GetReportService getReportService;*@
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+@inject IJSRuntime JS;
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration;
+@inject  Blazored.Toast.Services.IToastService toastService;
+@inject NavigationManager NavigationManager;
+@using Microsoft.Extensions.Logging
+@inject BrowserService Service
+@inject IDialogService Dialog
+@using System.Text.RegularExpressions;
+@using System.Globalization;
+@inject ISyncSessionStorageService sessionStorage
+
+<div class="container-fluid"  style="padding-left: 0px!important;padding-right: 15px!important;background:white!important;background-color:white!important;max-height:@MaxHeightBody!important;height:@MaxHeightBody!important;">
+    <div class="row" style="padding-bottom: 2px!important;padding-top:5px!important" @onkeypress="@KeyPressHandler">
+       <div class="col-12" style="padding-right:0px!important">
+            <div class="card">
+                <div class="card-header-new" style="padding:15px 5px 5px 5px!important">
+                    <section class="ss-panel-new">
+                        <span class="ss-header-new">Search Customer</span>
+                        <EditForm Model="@model" OnValidSubmit="OnValidSubmit">
+                            <div class="row g-1">
+                                <div class="col-md-2" style="padding-top:7px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <MudTextField  Mask="@(new PatternMask("0000000000"))" AutoFocus  Value="@model.Phone" name="Phone" id="Phone" Label="Phone" 
+                                    Variant="Variant.Outlined" Margin="Margin.Dense" T="string" TextChanged="@((string newValue)=>PhoneChange(newValue))" For="@(() => model.Phone)"></MudTextField>
+
+
+
+                                 </div>
+                                   <div class="col-md-2" style="padding-top:7px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <MudTextField Value="@model.Address" name="Address" id="Address" Label="Address" Variant="Variant.Outlined"
+                                    Margin="Margin.Dense"  T="string" TextChanged="@((string newValue)=>AddressChange(newValue))" For="@(() => model.Address)"></MudTextField>
+                                 </div>
+                                   <div class="col-md-2" style="padding-top:7px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <MudTextField Value="@model.FullName" name="FullName" id="FullName" Label="Full Name" Variant="Variant.Outlined" 
+                                    Margin="Margin.Dense"  T="string" TextChanged="@((string newValue)=>FullNameChange(newValue))" For="@(() => model.FullName)"></MudTextField>
+                                 </div>
+                                 <div class="col-md-2" style="padding-top:7px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <MudTextField Value="@model.DriverID" name="DriverID" id="DriverID" Label="ID" Variant="Variant.Outlined"
+                                    Margin="Margin.Dense"  T="string" TextChanged="@((string newValue)=>DriverIDChange(newValue))" For="@(() => model.DriverID)"></MudTextField>
+                                 </div>
+                                <div class="col-md-2" style="padding-top:7px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <MudTextField Mask="@(new PatternMask("000-00-0000"))" Value="@model.SSN" name="SSN" id="SSN" Label="SSN"
+                                    Variant="Variant.Outlined" Margin="Margin.Dense"  T="string" TextChanged="@((string newValue)=>SSNChange(newValue))" For="@(() => model.SSN)"></MudTextField>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:10px!important;padding-right:10px!important">
+                                   <div class="did-floating-label-content">
+                                        <select class="did-floating-input" value="@model.ToCountry" name="ToCountry" id="ToCountry" @onchange="ChangeCountry" aria-label="Floating label select example" placeholder="  ">
+                                            @foreach (var country in ReceiveCountryList)
+                                            {
+                                                <option value="@country.CountryCode">@country.CountryName</option>
+                                            }
+                                        </select>
+
+                                        <label class="did-floating-label">To Country</label>
+                                    </div>
+                                 </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:10px!important;padding-right:10px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-input" @bind="@model.StatusID" name="StatusID" id="StatusID" aria-label="Floating label select example" placeholder="  ">
+                                            @if (TypeofStatusAllList.Count > 0)
+                                            {
+                                                @foreach (var t in TypeofStatusAllList)
+                                                {
+                                                    <option value="@t.StatusID">@t.StatusName</option>
+                                                }
+                                            }
+                                        </select>
+                                        <label class="did-floating-label">Status</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:10px!important;padding-right:10px!important">
+                                <button type="button" class="btn btn-primary" @onclick="ViewReport" disabled="@isViewingReport" style="width:100%!important" >
+                                    @if (isViewingReport)
+                                    {
+                                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                                    }
+                                    Search
+                                </button>
+                            </div>
+                             </div>
+
+                        </EditForm>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (viewSearch)
+    {
+        <div class="row" style="padding-bottom: 2px!important;padding-top:5px!important;display:@isViewingSender">
+            <div class="card">
+             <div class="card-header-new" style="padding:15px 5px 5px 5px!important">
+                    <section class="ss-panel-new1">
+                        <span class="ss-header-new">Select Customer</span>
+                    <div class="row g-1" id="divSender" style="padding-top:10px!important">
+                        <div class="col-md-4">
+                            <div class="did-floating-label-content">
+                                <select class="did-floating-input"  id="CustID" name="CustID" value="@CustID" @onchange="ChangeCustomer" aria-label="Floating label select example">
+                                    @foreach (var customer in CustomerComboListList)
+                                    {
+                                        <option value="@customer.CustID">@customer.FullName</option>
+                                    }
+                                </select>
+                                <label class="did-floating-label" >Customer Name</label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="did-floating-label-content">
+                                <select class="did-floating-input"  id="B_CustID" name="B_CustID" value="@BCustID" @onchange="ChangeRecipient">
+                                    @if (RecipientComboListList != null)
+                                    {
+                                        @foreach (var customer in RecipientComboListList)
+                                        {
+                                            <option value="@customer.B_CUST_ID">@customer.B_FULLNAME</option>
+                                        }
+                                    }
+
+                                </select>
+                                <label class="did-floating-label" >Recipient Name</label>
+                            </div>
+                        </div>
+                       <div class="col-md-2" >
+                            @if (isViewbutton)
+                            {
+                                <button type="button" class="btn btn-primary" @onclick="SelectTransaction" >                                    
+                                    Select
+                                </button>
+                            }
+                        </div>
+                            <div class="col-md-2" style="display:@isDisplayCountry">
+                                <div class="did-floating-label-content">
+                                    <select class="did-floating-input" id="ToCountrySearch" value="@model.ToCountrySearch" @onchange="ChangeCountrySearch" aria-label="Floating label select example" placeholder="  ">
+                                        @foreach (var country in ReceiveCountryList)
+                                        {
+                                            <option value="@country.CountryCode">@country.CountryName</option>
+                                        }
+                                    </select>
+
+                                    <label class="did-floating-label">Select for New Recipient</label>
+                                </div>
+                            </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+</div>
+@if (LoadingReport)
+{
+<div class="spinner"></div> }
+else
+{
+  <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                  <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;;max-height:@MaxHeight!important;height:@MaxHeight!important;">
+
+                <table class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important">
+                      
+                        <thead>
+                            <tr>
+                                <th>No.</th>
+                                <th>Cust ID</th>
+                                <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Full Name</span></div></th>
+                                <th>Address</th>
+                                <th>Phone</th>
+                                <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Status Name</span></div></th>
+                                <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Reason for Block</span></div></th>
+                                <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">View History</span></div></th>
+                                        @if (AuthService.userMTRedSun.EditProfile==1)
+                                        {
+                                            <th>Profile</th>
+                                        }
+                                
+                            </tr>
+
+                        </thead>
+
+                        <tbody>
+                            @foreach (var item in CustomerListList)
+                            {
+            <tr>
+                <td>@item.RowNumber</td>
+                <td>@item.CUST_ID</td>
+                    <td>
+                          <div class="d-flex flex-column">
+                       
+                      
+                                    <span class="emp_name text-truncate">
+                                        <button type="button" style="padding-top: 0px!important;"  class="btn btn-link"   @onclick="() => HistoryTransaction(item.CUST_ID)">
+                        @item.FULLNAME
+                    </button></span>
+                                </div>
+                        
+                </td>
+                <td>@item.FULLADDRESS</td>
+                <td>@item.PHONE1</td>
+                <td style="text-align:center!important">
+                                                @if (AuthService.userMTRedSun.EditProfile==1)
+                                                {
+                                                     <button type="button" style="padding-top: 0px!important;"  class="btn btn-link" @onclick="() => EditStatus(item.CUST_ID, item.FULLNAME,item.STATUS)">
+                                                        @item.StatusName.ToUpper()
+                                                    </button>
+                                                }
+                                                else
+                                                {
+                                                    @item.StatusName.ToUpper()
+                                                }
+                       
+                    </td>
+                            
+                <td>@item.ReasonforBlock</td>
+                                            <td style="text-align:center!important"><a href="@item.LinkHistory" class="btn btn-link">@item.History</a></td>
+                                            @if (AuthService.userMTRedSun.EditProfile == 1)
+                                            {
+                                                <td style="text-align:center!important">
+                    <button type="button" style="padding-top: 0px!important;"  class="btn btn-link" @onclick="() => EditCustomer(item.CUST_ID)">
+                        <i class="fas fa-edit" />
+                    </button>
+                </td>
+                                            }
+            
+            </tr>}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+       <div class="row" style="padding-top:2px!important;padding-bottom:2px!important;">
+                                             <div class="col-sm-12 col-md-6"  style="float:right!important">
+                                                <div class="dataTables_paginate paging_simple_numbers" id="basic-datatable_paginate" style="padding-right:10px!important;color: #166178!important">
+                                                    <button class="btn btn-customer"  @onclick="@(async()=> await NavigateToPage("first"))">First</button>
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("prev"))">Prev</button>
+                                                    @for (int i = startPage; i <= endPage; i++)
+                                                    {
+                                                        var currentPage = i;
+                                <button class="btn btn-customer @(currentPage==curPage?"btn-danger":"")"   @onclick="@(async()=> await RefreshRecord(currentPage))"> @i</button>}
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("next"))">Next</button>
+                                                    <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("last"))">Last</button>
+                                                </div>
+                                               
+                                            </div>
+                                            
+                                             <div class="col-sm-12 col-md-3 float-left"  style="float:center!important">
+                                                <div class="dataTables_length" id="basic-datatable_length" style="padding-top:10px!important">
+                                                     @noidungpage
+                                                     </div>
+                                            </div>
+                                             <div class="col-sm-12 col-md-3" style="float:left!important">
+                                                <div class="dataTables_length" id="basic-datatable_length">
+
+                                                    <select name="basic-datatable_length" aria-controls="basic-datatable" class="form-select-pagesize" value="@pageSize" aria-label="Floating label select example" @onchange="ChangepageSize">
+                                                        @foreach (var pagesize in pagesizeModels)
+                                                        {
+                                    <option value="@pagesize.PageID">@pagesize.PageName</option>
+}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                           
+                                           
+                                        </div>
+        }
+        }
+  
+    <MudDialog @bind-IsVisible="@isModalProfileVisible" Options="@(new DialogOptions() { MaxWidth = MaxWidth.ExtraLarge, FullWidth = true })">
+        <DialogContent>
+                <MudTabs Outlined="true" @bind-ActivePanelIndex="activeIndex" MudBlazor.Position="Position.Top">
+                    <MudTabPanel Text="Customer Profile" Icon="@Icons.Material.Filled.SettingsApplications" Style="width:250px!important" >
+                        <EditForm Model="@modelEditCust">
+                            <div class="card" style="padding-top:15px!important;min-height:600px!important">
+                                <section class="ss-panel-new1">
+                                    <span class="ss-header-new">Customer Profile</span>
+                                    <div class="row">
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.LASTNAME" placeholder="  " disabled=@isEditCustomer @ref="@E_LASTNAME" style="background-color:@C_LASTNAME">
+                                                <label class="did-floating-label">Last Name</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.MIDDLENAME" placeholder="  " disabled=@isEditCustomer @ref="@E_MIDDLENAME" style="background-color:@C_MIDDLENAME">
+                                                <label class="did-floating-label">M Name</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.FIRSTNAME" placeholder="  " disabled=@isEditCustomer @ref="@E_FIRSTNAME" style="background-color:@C_FIRSTNAME">
+                                                <label class="did-floating-label">First Name</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-8" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.ADDRESS" placeholder="  " disabled=@isEditCustomer @ref="@E_ADDRESS" style="background-color:@C_ADDRESS">
+                                                <label class="did-floating-label">Address</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.CITY" placeholder="  " disabled=@isEditCustomer @ref="@E_CITY" style="background-color:@C_CITY">
+                                                <label class="did-floating-label">City</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <select class="did-floating-input" @bind="@modelEditCust.STATE" aria-label="Floating label select example" placeholder="  " disabled=@isEditCustomer @ref="@E_STATE" style="background-color:@C_STATE">
+                                                    @foreach (var state in SendStateList)
+                                                    {
+                                                        <option value="@state.StateCode">@state.StateName</option>
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">State</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.ZIP_CODE" placeholder="  " disabled=@isEditCustomer @ref="@E_ZIP_CODE" style="background-color:@C_ZIP_CODE">
+                                                <label class="did-floating-label">Zipcode</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <MudTextField Mask="@(new PatternMask("000-000-0000"))" @bind-Value="@modelEditCust.PHONE1" Label="Phone" Variant="Variant.Outlined" Margin="Margin.Dense" disabled=@isEditCustomer></MudTextField>
+
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.EMAIL" placeholder="  " disabled=@isEditCustomer @ref="@E_EMAIL" style="background-color:@C_EMAIL">
+                                                <label class="did-floating-label">Email</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <select class="did-floating-input" value="@modelEditCust.ID_TYPE" @onchange="ChangeIDType" aria-label="Floating label select example" placeholder="  " disabled=@isEditCustomer @ref="@E_ID_TYPE" style="background-color:@C_ID_TYPE">
+                                                    @foreach (var idType in IDTypeList)
+                                                    {
+                                                        <option value="@idType.IDType">@idType.IDName</option>
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">ID Type</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.DRIVER_ID_BK" placeholder="  " disabled=@isEditCustomer @ref="@E_DRIVER_ID_BK" style="background-color:@C_DRIVER_ID_BK">
+                                                <label class="did-floating-label">ID</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                @*<input type="text" class="did-floating-input" id="floatingInput" @bind="@model.SBHCountryIssue" >*@
+                                                <select class="did-floating-input" value="@modelEditCust.COUNTRY_ISSUE" aria-label="Floating label select example" @onchange="ChangeCountryIssue" placeholder="  " disabled=@isEditCustomer @ref="@E_CountryIssue" style="background-color:@C_CountryIssue">
+                                                    @foreach (var country in SendCountryIssueList)
+                                                    {
+                                                        <option value="@country.CountryCode">@country.CountryName</option>
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">Country Issue</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                @*<input type="text" class="did-floating-input" id="floatingInput" @bind="@model.SBHStateIssue" >*@
+                                                <select class="did-floating-input" value="@modelEditCust.STATE_ISSUE" @onchange="ChangeStateIssue" aria-label="Floating label select example" placeholder="  " disabled=@isEditCustomer @ref="@E_STATE_ISSUE" style="background-color:@C_STATE_ISSUE">
+
+                                                    @foreach (var state in SendStateIssueList)
+                                                    {
+                                                        <option value="@state.StateCode">@state.StateName</option>
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">State Issue</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:5px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <MudDatePicker Label="Issue Date" @bind-Date="@modelEditCust.IssueDateBK" Mask="@(new DateMask("MM/dd/yyyy"))" DateFormat="MM/dd/yyyy" Placeholder="MM/dd/yyyy" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                           disabled=@isEditCustomer Editable="true" Culture="@_en" />
+
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:5px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <MudDatePicker Label="Expire Date" @bind-Date="@modelEditCust.EXPIRATIONBK" Mask="@(new DateMask("MM/dd/yyyy"))" DateFormat="MM/dd/yyyy" Placeholder="MM/dd/yyyy" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                           disabled=@isEditCustomer Editable="true" Culture="@_en" />
+
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:5px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <MudDatePicker Label="DOB" @bind-Date="@modelEditCust.DOB_BK1" Mask="@(new DateMask("MM/dd/yyyy"))" DateFormat="MM/dd/yyyy" Placeholder="MM/dd/yyyy" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                                           disabled=@isEditCustomer Editable="true" Culture="@_en" />
+
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <MudTextField class="NumberOnly" Mask="@(new PatternMask("000-00-0000"))" @bind-Value="@modelEditCust.SSN_BK" Label="SSN" Variant="Variant.Outlined" Margin="Margin.Dense" disabled=@isEditCustomer></MudTextField>
+
+                                            @* <div class="did-floating-label-content">
+                                            <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.SSN_BK" placeholder="  "  disabled=@isEditCustomer   @ref="@E_SSN_BK" style="background-color:@C_SSN_BK" >
+                                            <label class="did-floating-label" >SSN</label>
+                                            </div>*@
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.Occupation" placeholder="  " disabled=@isEditCustomer @ref="@E_Occupation" style="background-color:@C_Occupation">
+                                                <label class="did-floating-label">Occupation</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <select class="did-floating-input" @bind="@modelEditCust.STATUS" aria-label="Floating label select example" placeholder="  " disabled=@isEditCustomer @ref="@E_Status" style="background-color:@C_Status">
+                                                    @if (TypeofStatusList.Count > 0)
+                                                    {
+                                                        @foreach (var t in TypeofStatusList)
+                                                        {
+                                                            <option value="@t.StatusID">@t.StatusName</option>
+                                                        }
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">Status</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.ReasonforBlock" placeholder="  " disabled=@isEditCustomer @ref="@E_ReasonforBlock" style="background-color:@C_ReasonforBlock">
+                                                <label class="did-floating-label">Reason for block</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <select class="did-floating-input" value="@modelEditCust.TypeofUpdate" @onchange="ChangeTypeUpdate" aria-label="Floating label select example" placeholder="  " disabled=@isEditCustomer @ref="@E_ID_TYPE" style="background-color:@C_ID_TYPE">
+                                                    @foreach (var idType in TypeofUpdateList)
+                                                    {
+                                                        <option value="@idType.TypeID">@idType.TypeName</option>
+                                                    }
+                                                </select>
+                                                <label class="did-floating-label">Type Update</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important;display:@isDisplayUpdate">
+                                            <div class="did-floating-label-content">
+                                                <textarea type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.ReasonforUpdate" placeholder="  "
+                                                          disabled=@isEditCustomer @ref="@E_ReasonforUpdate" style="background-color:@C_ReasonforUpdate;height:60px!important" />
+                                                <label class="did-floating-label">Reason for Update</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <textarea type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.Comment" placeholder="  " disabled=@isEditCustomer @ref="@E_Comment" style="background-color:@C_Comment;height:60px!important" />
+                                                <label class="did-floating-label">Note</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <div class="did-floating-label-content">
+                                                <textarea type="text" class="did-floating-input" id="floatingInput" @bind="@modelEditCust.CompanyNote" placeholder="  " disabled=@isEditCustomer @ref="@E_CompanyNote" style="background-color:@C_CompanyNote;height:60px!important" />
+                                                <label class="did-floating-label">Company Note</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row" style="padding-bottom:15px!important;padding-top:10px!important">
+                                        <div class="col-md-3" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                        </div>
+                                        <div class="col-md-2" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <button type="button" class="btn btn-primary" @onclick="EditCustomerReport" style="width:100%!important">
+                                                Edit
+                                            </button>
+
+
+                                        </div>
+                                        <div class="col-md-2" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <button type="button" class="btn btn-primary" @onclick="UpdateProfile" style="width:100%!important" disabled=@isEditCustomer>
+                                                @if (isUpdate)
+                                                {
+                                                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                                                }
+                                                Update
+                                            </button>
+                                        </div>
+                                        <div class="col-md-2" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                            <button type="button" class="btn btn-warning" @onclick="CloseEditModel" style="width: 100% !important">
+                                                Exit
+                                            </button>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </EditForm>
+                    </MudTabPanel>
+                    <MudTabPanel Text="Customer Documents" Style="width:250px!important">
+                        <form>
+                            <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                                @if (IsViewDelete)
+                                {
+                                    <div class="modal fade show" id="editModalDelete" tabindex="-1" style="display:flex;padding-top:3rem!important" aria-modal="true" role="dialog" @onkeydown="CloseDelete">
+                                        <div class="modal-dialog" role="document" style="max-width:80%!important">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirm Delete</h5>
+
+                                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseDelete">
+                                                        <span aria-hidden="true" style="font-size: xx-large;">&times;</span>
+                                                    </button>
+                                                </div>
+                                                <div class="row" style="padding:20px!important">
+                                                    <div class="col-12" style="text-align:center!important">
+                                                        Do you want to delete this File???
+                                                    </div>
+
+                                                </div>
+                                                <div class="row" style="padding-bottom:40px!important">
+                                                    <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                                    </div>
+                                                    <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                                        <button type="button" class="btn btn-primary" @onclick="ConfirmDeleteFile" style="width:100px!important">
+
+                                                            Delete
+                                                        </button>
+                                                        <button type="button" class="btn btn-primary" @onclick="NotConfirmDeleteFile" style="width:100px!important">
+
+                                                            Cancel
+                                                        </button>
+
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card" style="padding-top:15px!important">
+                                            <section class="ss-panel-new1">
+                                                <span class="ss-header-new">Upload file</span>
+                                                @*<h4 class="header-title mb-1">Báo cáo hồ sơ</h4>*@
+                                                <EditForm Model="@modelfile">
+                                                    <div class="row g-1">
+
+                                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                                            <div class="did-floating-label-content">
+                                                                <input type="text" class="did-floating-input" id="floatingInput" @bind="@modelfile.FileName" placeholder="  " @ref="@E_FileName" style="background-color:@C_FileName">
+                                                                <label class="did-floating-label">File Name</label>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                                            <InputFile OnChange="@LoadFiles" multiple accept=".xls,.xlsx,.doc,.docx,.pdf,.jpg,.gif,.png" />
+                                                        </div>
+                                                        <div class="col-md-4" style="padding-top:8px!important;padding-left:10px!important;padding-right:10px!important">
+                                                            <button type="button" class="btn btn-primary" @onclick="UploadFile" disabled="@isUploadFile" style="width:200px!important">
+                                                                @if (isUploadFile)
+                                                                {
+                                                                    <span class="spinner-border spinner-border-sm mr-1"></span>
+                                                                }
+                                                                Upload File
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </EditForm>
+                                            </section>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-datatable dataTable_select nowrap table-responsive">
+                                                <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" disabled=@isEditCustomer style="border-color: #f3f4f4!important;">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>No.</th>
+                                                            <th>
+                                                                <div class="d-flex flex-column">
+                                                                    <span class="emp_name text-truncate">File Name</span>
+                                                                </div>
+                                                            </th>
+                                                            <th>File</th>
+                                                            <th>Download</th>
+                                                            <th>Delete</th>
+
+                                                            <th>
+                                                                <div class="d-flex flex-column">
+                                                                    <span class="emp_name text-truncate">Created by </span>
+                                                                </div>
+                                                            </th>
+                                                            <th>
+                                                                <div class="d-flex flex-column">
+                                                                    <span class="emp_name text-truncate">Created Date</span>
+                                                                </div>
+                                                            </th>
+                                                            <th>
+                                                                <div class="d-flex flex-column">
+                                                                    <span class="emp_name text-truncate">Edited by </span>
+                                                                </div>
+                                                            </th>
+
+                                                            <th>
+                                                                <div class="d-flex flex-column">
+                                                                    <span class="emp_name text-truncate">Edited Date</span>
+                                                                </div>
+                                                            </th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tr>
+                                                    </tr>
+                                                    <tbody>
+                                                        @foreach (var item in SenderDocumentsList)
+                                                        {
+
+                                                            <tr>
+                                                                <td>@item.RowNumber</td>
+                                                                <td>@item.FileName1</td>
+                                                                <td>@item.FileName</td>
+                                                                <td style="text-align:center!important">
+                                                                    @if (!String.IsNullOrEmpty(@item.FileName))
+                                                                    {
+                                                                        <button type="button" class="btn btn-link" @onclick="() => DownloadFileFromStream(item.FileName,item.No)">
+                                                                            <i class="bx bx-download mx-1"></i>
+                                                                        </button>                                                                        
+                                                                    }
+                                                                </td>
+                                                                <td style="text-align:center!important">
+                                                                    <button type="button" class="btn btn-link" @onclick="() => DeleteFile(item.No)">
+                                                                        <i class="bx bx-trash"></i>
+                                                                    </button>
+                                                                </td>
+                                                                <td>@item.CreateBy</td>
+                                                                <td>@item.CreateDate</td>
+                                                                <td>@item.EditBy</td>
+                                                                <td>@item.EditDate</td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+
+                    </MudTabPanel>
+                    <MudTabPanel Text="Edit History" Style="width:250px!important">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                                    <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select"
+                                           style="border-color: #f3f4f4!important;">
+                                        <thead>
+                                            <tr>
+                                                <th>No.</th>
+                                                @* <th>Cust ID</th>*@
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Customer Name</span>
+                                                    </div>
+                                                </th>
+                                                @* <th>Middle Name</th>
+                                                <th>First Name</th>
+                                                <th>Address</th>
+                                                <th>City</th>
+                                                <th>State</th>
+                                                <th>Zipcode</th>*@
+                                                @*  <th>Phone</th>*@
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Driver ID</span>
+                                                    </div>
+                                                </th>
+                                                <th>SSN</th>
+                                                <th>Note</th>
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Reason for update</span>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Company Note</span>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Edit By</span>
+                                                    </div>
+                                                </th>
+                                                <th>
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">Edit Date</span>
+                                                    </div>
+                                                </th>
+                                            </tr>
+
+                                        </thead>
+                                        <tr>
+                                        </tr>
+                                        <tbody>
+
+                                            @foreach (var item in EditHistoryList)
+                                            {
+
+                                                <tr>
+
+                                                    <td>@item.RowNumber</td>
+                                                    @* <td>@item.CUST_ID</td>*@
+                                                    <td>
+                                                        <div class="d-flex justify-content-start align-items-center user-name">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate">@item.LASTNAME  @item.MIDDLENAME @item.FIRSTNAME</span>
+                                                                <small class="emp_post text-muted">@item.ADDRESS @item.CITY @item.STATE @item.ZIP_CODE</small>
+                                                                <small class="emp_post text-truncate">@item.PHONE1</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    @*    @item.LASTNAME</td>
+                                                <td>@item.MIDDLENAME</td>
+                                                <td>@item.FIRSTNAME</td>*@
+                                                    @*  <td>@item.ADDRESS</td>
+                                                <td>@item.CITY</td>
+                                                <td>@item.STATE</td>
+                                                <td>@item.ZIP_CODE</td>*@
+                                                    @* <td>@item.PHONE1</td>*@
+                                                    <td>@item.DRIVER_ID</td>
+                                                    <td>@item.SSN</td>
+                                                    <td>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name">@item.COMMENT</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name">@item.ReasonforUpdate</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name">@item.CompanyNote</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>@item.EditBy</td>
+                                                    <td>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> @item.EditDate</span>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </MudTabPanel>
+                    <MudTabPanel Text="Block/UnBlock History" Style="width:250px!important">
+                        <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-datatable dataTable_select nowrap table-responsive">
+                                        <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" disabled=@isEditCustomer style="border-color: #f3f4f4!important;">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    @* <th>Cust ID</th>*@
+                                                    <th>Reason</th>
+                                                    <th>Status</th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate">Action by</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>Date</th>
+
+                                                </tr>
+
+                                            </thead>
+                                            <tr>
+                                            </tr>
+                                            <tbody>
+                                                @foreach (var item in BlockHistoryList)
+                                                {
+                                                    <tr>
+                                                        <td>@item.RowNumber</td>
+                                                        @* <td>@item.CUST_ID</td>*@
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate">@item.COMMENT</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>@item.ACTION_TYPE</td>
+                                                        <td>@item.ActionBy</td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate"> @item.ActionDate</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </MudTabPanel>
+                    <MudTabPanel Text="Hold/Release History" Style="width:250px!important">
+                         <div class="col-12">
+                               <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                                <div class="card-datatable dataTable_select nowrap table-responsive">
+                                    <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" disabled=@isEditCustomer style="border-color: #f3f4f4!important;">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    <th>Reason</th>
+                                                    <th>Status</th>
+                                                    <th>Action by</th>
+                                                    <th>Date</th>
+                                                </tr>
+
+                                            </thead>
+                                          
+                                            <tbody>
+                                                @foreach (var item in HoldHistoryList)
+                                                {
+                                                    <tr>
+                                                        <td>@item.RowNumber</td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate">@item.REASON</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>@item.REASONCODE</td>
+                                                        <td>@item.CREATEBY</td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate"> @item.CREATEDATE</span>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                    </MudTabPanel>
+                    <MudTabPanel Text="OFAC History" Style="width:250px!important">
+                        <div class="col-12">
+                            <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                                <div class="card-datatable dataTable_select nowrap table-responsive">
+                                    <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" disabled=@isEditCustomer style="border-color: #f3f4f4!important;">
+                                        <thead>
+                                            <tr>
+                                                <th>No.</th>
+                                                <th>Trans ID</th>
+                                                <th>Sender</th>
+                                                <th>Receiver </th>
+                                                <th>Reason</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tr>
+                                        </tr>
+                                        <tbody>
+                                            @foreach (var item in OFACHistoryList)
+                                            {
+                                                <tr>
+                                                    <td>@item.RowNumber</td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-start align-items-center user-name">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate fw-semibold"> @item.TRANS_ID</span>
+                                                                <small class="emp_post text-truncate">@item.TRANS_DATE</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-start align-items-center user-name">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate"> @item.C_NAME</span>
+                                                                <small class="emp_post text-muted">@item.S_ADDRESS</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-start align-items-center user-name">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate"> @item.R_NAME</span>
+                                                                <small class="emp_post text-muted">@item.R_ADDRESS</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name">@item.COMMENT</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="d-flex justify-content-start align-items-center user-name">
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate">@item.ACTION_TYPE</span>
+                                                                <small class="emp_post text-truncate"> @item.ActionBy</small>
+                                                                <small class="emp_post text-truncate"> @item.ActionDate</small>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </MudTabPanel>
+                    <MudTabPanel Text="KYC History" Style="width:450px!important;padding-right:200px!important">
+                        <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;min-height:600px!important">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-datatable dataTable_select nowrap table-responsive">
+                                        <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" disabled=@isEditCustomer style="border-color: #f3f4f4!important;">
+                                            <thead>
+                                                <tr>
+                                                    <th>No.</th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> Customer Name</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>Phone</th>
+                                                    <th>Occupation</th>
+                                                    <th>Trans ID</th>
+                                                    <th>Amount</th>
+                                                    <th>Pay Type</th>
+                                                    <th>Type</th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> KYC Reason</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> Compliane Comment</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> Action by</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>Date</th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate"> Driver ID File</span>
+                                                        </div>
+                                                    </th>
+                                                    <th>
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate">Source of Funds File</span>
+                                                        </div>
+                                                    </th>
+                                                </tr>
+
+                                            </thead>
+                                            <tr>
+                                            </tr>
+                                            <tbody>
+                                                @foreach (var item in KYCHistoryList)
+                                                {
+                                                    <tr>
+                                                        <td>@item.RowNumber</td>
+                                                        <td>@item.C_NAME</td>
+                                                        <td>@item.PHONE1</td>
+                                                        <td>@item.OCCUPATION</td>
+                                                        <td>@item.TRANS_ID</td>
+                                                        <td>@String.Format("{0:n2}", @item.TOTAL_AMT_USD)</td>
+                                                        <td>@item.PAY_TYPE</td>
+                                                        <td>@item.ACTION_TYPE</td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name">@item.COMMENT</span>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name"> @item.AG_COMMENT</span>
+                                                            </div>
+                                                        </td>
+
+                                                        <td>@item.ActionBy</td>
+                                                        <td>
+                                                            <div class="d-flex flex-column">
+                                                                <span class="emp_name text-truncate"> @item.ActionDate</span>
+                                                            </div>
+                                                        </td>
+
+                                                        <td>@item.FILEIDNAME</td>
+                                                        <td>@item.FILESOURCENAME</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </MudTabPanel>  
+                    <MudTabPanel Text="" >
+                    </MudTabPanel>
+                </MudTabs>
+        </DialogContent>
+    </MudDialog>
+    <MudDialog @bind-IsVisible="@isModalStatusVisible" Options="@(new DialogOptions() { MaxWidth = MaxWidth.Small, FullWidth = true })">
+        <DialogContent>
+        <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                    <EditForm Model="@modelStatus">
+                                <div class="row">
+                                    <div class="col-md-12" style="margin:5px!important">
+                                       
+              <span class="fw-bold me-2">Cust ID:</span>
+              <span>@modelStatus.CustID</span>
+           </div>
+                                    </div>
+                                    <div class="row">
+                                    <div class="col-md-12" style="margin:5px!important">                                       
+              <span class="fw-bold me-2">Full Name:</span>
+              <span>@modelStatus.Fullname</span>
+           </div>
+                                    </div>
+                                     <div class="row">
+                                       <div class="col-md-12" style="margin:5px!important;padding-right: 30px!important">
+                                        <div class="did-floating-label-content">
+                                            <select class="did-floating-input"  @bind="@modelStatus.StatusID" aria-label="Floating label select example"  @ref="@E_Status" style="background-color:@C_Status"  placeholder="  " >
+                                                @if (TypeofStatusList.Count > 0)
+                                                {
+                                                    @foreach (var t in TypeofStatusList)
+                                                    {
+                                                        <option value="@t.StatusID">@t.StatusName</option>
+                                                    }
+                                                }
+                                            </select>
+                                        <label class="did-floating-label" >Status</label>
+                                    </div>
+                                </div>
+                                 </div>
+                                <div class="row">
+                                   <div class="col-md-12" style="margin:5px!important;padding-right: 30px!important;">
+                                        <div class="did-floating-label-content">
+                                            <textarea type="text" class="did-floating-input" style="height:60px!important;background-color:@C_ReasonforUpdate" id="floatingInput" @bind="@modelStatus.ReasonforUpdate" @ref="@E_ReasonforUpdate" placeholder="  "   ></textarea>
+                                            <label class="did-floating-label" >Note</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                 <div class="row">
+               
+               <div class="col-md-12" style="margin:5px!important;text-align:center!important;vertical-align:central">
+                 
+                    <button type="button" class="btn btn-primary"  @onclick="UpdateStatus"  style="width:100px!important">
+                      
+                        Update
+                    </button>
+
+
+                                        <button type="button" class="btn btn-warning" @onclick="CloseStatus" style="width: 100px !important">
+                                            Exit
+                    </button>
+                </div>
+            </div>
+                            </EditForm>
+                    </div>   
+                    </div>   
+                  </div>
+    </DialogContent>
+</MudDialog>
+    <MudDialog @bind-IsVisible="@isModalVisible" Options="@(new DialogOptions() { MaxWidth = MaxWidth.ExtraLarge, FullWidth = true })">
+        <DialogContent>
+         
+        <div class="row" style="padding-bottom: 2px!important;padding-top:15px!important">          
+            <div class="col-4">
+                <button type="button" class="btn btn-primary" @onclick="ExportExcel" disabled=@isExportExcel style="width:200px!important">
+                    Export Excel
+                    @if (isExportExcel)
+                    {
+                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                    }
+                </button>
+            </div>
+        </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;max-height:480px!important;height:480px!important;">
+
+                            <table id="basic-datatable" class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important;">
+                                <thead>
+                                    <tr>
+                                       @*  @if (AuthService.userMTRedSun.AgentID.ToString() == "CA01")
+                                                        { *@
+                                        <th style="width: 20px !important;"></th>
+                                                        @* } *@
+                                        <th>No</th>
+                                        <th>Trans ID</th>
+                                        <th>Recipient</th>
+                                        <th>Amount</th>
+                                        <th>Reorder</th>
+                                        <th width="150px">New Recipient</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @if (HistoryCustomerSendList != null)
+                                    {
+                                        @foreach (var item in HistoryCustomerSendList)
+                                        {
+                                            <tr>
+                                                @* @if (AuthService.userMTRedSun.AgentID.ToString() == "CA01")
+                                                { *@
+                                                    <td style="width: 20px !important;padding-left: 15px;padding-right: 15px;text-align:center!important">                                                   
+                                                        <span class="emp_name text-truncate">
+                                                            @if (item.DisableAmount)
+                                                            {
+                                                                <a target="_blank" href="@item.linkTransID" class="btn btn-link" style="padding-left:0px!important"><i class="fas fa-edit" /></a>
+                                                            }
+                                                        </span>
+                                                    </td>
+                                                @* } *@
+                                                <td>@item.RowNumber</td>
+                                                <td>
+                                                    <div class="d-flex justify-content-start align-items-center user-name">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate fw-semibold">
+                                                                @item.TRANS_ID
+                                                            </span>
+                                                            @if (!string.IsNullOrEmpty(item.CN_TRANS_NO))
+                                                            {
+                                                                <small class="emp_name text-truncate"> @item.CN_TRANS_NO</small>
+                                                            }
+                                                            <small class="emp_post text-truncate">@item.TRANS_DATE</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div class="d-flex justify-content-start align-items-center user-name">
+                                                        <div class="d-flex flex-column">
+                                                            <span class="emp_name text-truncate fw-semibold"> @item.B_FULLNAME</span>
+                                                            <small class="emp_post text-muted">@item.R_FULLADDRESS</small>
+                                                            <small class="emp_post text-truncate">@item.B_PHONE1</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style="text-align:right!important">
+                                                    @if (item.DisableAmount)
+                                                    {
+                                                        @String.Format("{0:n2}", @item.AMOUNT)
+                                                    }
+                                                </td>
+                                                @if (item.StatusNameBlock.ToString().ToUpper().Contains("ALLOW") || item.StatusNameBlock.ToString().ToUpper().Contains("ACTIVE"))
+                                                {
+                                                    <td style="text-align:center!important">
+                                                        @if (item.StatusName.ToString().ToUpper().Contains("ALLOW") || item.StatusName.ToString().ToUpper().Contains("ACTIVE"))
+                                                        {
+                                                            <a href="@item.ReOrder" class="btn btn-link">Reorder</a>
+                                                        }
+                                                    </td>
+                                                    <td style="width:250px!important">
+                                                        <div style="float: left; width: 100%; padding-left: 5px">
+                                                            <div style="float: left; width: 65%; padding-left: 0px!important; text-align: left!important; color: #818181!important">
+                                                                <select class="did-floating-input" @onchange="eventArgs => { EnableButton(item, eventArgs.Value); }" aria-label="Floating label select example" style="padding-top: 5px !important; padding-left: 10px !important; height: 35px !important;width:100%!important">
+                                                                    @if (ReceiveCountryList != null)
+                                                                    {
+                                                                        @foreach (var country in ReceiveCountryList)
+                                                                        {
+                                                                            <option value="@country.CountryCode">@country.CountryName</option>
+                                                                        }
+                                                                    }
+                                                                </select>
+                                                            </div>
+                                                            <div style="float: left; width: 35%; padding-left: 5px; color: #818181!important">
+                                                                @if (item.DisableButton)
+                                                                {
+                                                                    <a href="@item.NewLink" class="btn btn-link">New Country</a>
+                                                                }
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td style="text-align:center!important">
+                                                    </td>
+                                                    <td width="150px">
+                                                    </td>
+                                                }
+
+                                            </tr>
+                                        }
+                                    }
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="padding-top:2px!important;padding-bottom:2px!important;max-height:60px!important;height:60px!important;">
+                <div class="col-sm-12 col-md-6" style="float:right!important">
+                    <div class="dataTables_paginate paging_simple_numbers" id="basic-datatable_paginate" style="padding-right:10px!important;color: #166178!important">
+                        <button class="btn btn-customer" @onclick="@(async()=> await NavigateToPagehis("first"))">First</button>
+                        <button class="btn btn-customer" @onclick="@(async()=> await NavigateToPagehis("prev"))">Prev</button>
+                        @for (int i = startPagehis; i <= endPagehis; i++)
+                        {
+                            var currentPagehis = i;
+                            <button class="btn btn-customer @(currentPagehis==curPagehis?"btn-danger":"")" @onclick="@(async()=> await RefreshRecordhis(currentPagehis))"> @i</button>
+                        }
+                        <button class="btn btn-customer" @onclick="@(async()=> await NavigateToPagehis("next"))">Next</button>
+                        <button class="btn btn-customer" @onclick="@(async()=> await NavigateToPagehis("last"))">Last</button>
+                    </div>
+
+                </div>
+
+                <div class="col-sm-12 col-md-3 float-left" style="float:center!important">
+                    <div class="dataTables_length" id="basic-datatable_length" style="padding-top:10px!important">
+                        @noidungpagehis
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-3" style="float:left!important">
+                    <div class="dataTables_length" id="basic-datatable_length">
+                        <select name="basic-datatable_length" aria-controls="basic-datatable" class="form-select-pagesize" value="@pageSize" aria-label="Floating label select example" @onchange="ChangepageSizehis">
+                            @foreach (var pagesize in pagesizeModels)
+                            {
+                                <option value="@pagesize.PageID">@pagesize.PageName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+
+            </div>
+        </DialogContent>
+    </MudDialog>
+
+    <MudDialog id="Compliance" @bind-IsVisible="@isViewCompliance" Options="dialogOptionsEdit" 
+          Style="max-width: none !important;width:1080px!important;overflow-y: scroll;height:650px!important">
+             <TitleContent>
+                <MudText Typo="Typo.h4" Style="text-align: left!important">
+                    <MudIcon  Class="mr-3"/>
+                    @if(ComplianceNote!=null)
+                    {
+                        @ComplianceNote.NOIDUNG; 
+                    }
+                       
+                </MudText>
+              <MudText Typo="Typo.body1" Style="text-align: center!important">
+                    <MudIcon  Class="mr-3"/>
+                    @if(ComplianceNote!=null)
+                    {
+                        @ComplianceNote.Comment; 
+                    }
+                       
+                </MudText>
+            </TitleContent>
+           <DialogContent>
+                <MudContainer Style="padding-left:0px!important;padding-right:0px!important">
+                        <div class="row" style="height:500px!important;overflow:scroll">                        
+                            <img src="@LinkImage" alt="@ComplianceFile.Comment" class="rounded-top">
+                        </div>
+                        <div class="row" style="height:50px!important">
+                            <div class="col-12">    
+                                <div style="float: left; width: 80%; padding-left: 0px!important; text-align: left!important; color: #818181!important">
+                                                  <label class="form-check m-0">
+                                    <input type="checkbox" class="form-check-input" @onchange="eventArgs => { CheckboxClickedVerify(eventArgs.Value); }">
+                                    <span class="form-check-label" style="color:red!important">@AuthService.userMTRedSun.AgentName.ToString(), @AuthService.userMTRedSun.FullName.ToString() , I confirm that I have received the notice and agree to comply with the regulations set forth by Honglan Serivces, Inc..</span>
+                                </label>   
+                                                </div>
+                                                <div style="float: left; width: 20%; padding-left: 5px">
+                                                    <button type="button" class="btn btn-primary" @onclick="VerifyTransaction" disabled="@isVerify" style="width:100%; display:@displayVerify">
+                                                    @if (isVerify)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm mr-1"></span>
+                                                    }
+                                                    Submit
+                                                </button>
+
+                                        </div>
+                                    </div>
+                       
+                            
+                        </div>
+
+        </MudContainer>
+                    </DialogContent>
+        </MudDialog>
+    
+      <MudDialog id="Compliance" @bind-IsVisible="@isViewNote" Options="dialogOptionsEdit" Style="max-width: none !important;width:1080px!important;overflow-y: scroll;height:400px!important">
+             <TitleContent>
+                <MudText Typo="Typo.h4" Style="text-align: left!important">
+                    <MudIcon  Class="mr-3"/>
+                    @if(ComplianceNote!=null)
+                    {
+                        @ComplianceNote.NOIDUNG                   ;
+                    }
+                       
+                </MudText>
+            <MudText Typo="Typo.body2" Style="font-size: larger!important ;padding-top:30px!important;padding-right: 30px!important;  text-align: center!important;  color: black!important;   padding-left: 30px!important;">
+                <MudIcon  Class="mr-3"/>
+                     @if(!string.IsNullOrEmpty( ComplianceNote.Comment))
+                    {
+                        @ComplianceNote.Comment
+                    }
+                    <br>
+                    @if(!string.IsNullOrEmpty( ComplianceNote.Comment2))
+                    {
+                        @ComplianceNote.Comment2
+                    }
+                    <br>
+                    @if(!string.IsNullOrEmpty( ComplianceNote.Comment3))
+                    {
+                    @ComplianceNote.Comment3
+                }
+                       
+                </MudText>
+            </TitleContent>
+          
+        </MudDialog>
+
+    </div>
+
+
+
+    <script>
+  window.sendTab = function () {
+    let active = document.activeElement;
+    if (!active) return;
+    let formElements = Array.from(document.querySelectorAll('input, button, select, textarea, a[href]'));
+    let index = formElements.indexOf(active);
+    if (index > -1 && index + 1 < formElements.length) {
+        formElements[index + 1].focus();
+    }
+  }
+</script>
+
+@code{
+    public class UploadFileModel
+    {
+        public string?  UserID { get; set; } = "";
+        public string?  CUST_ID { get; set; } = "";
+        public List<CustomerProfileFile> SenderDocumentsLists { get; set; }= new List<CustomerProfileFile>() ;
+
+    }
+
+    List<pageSizeModel> pagesizeModels = new List<pageSizeModel>
+    {
+        new pageSizeModel { PageID = 10, PageName = "10" },
+        new pageSizeModel { PageID = 20, PageName = "20" },
+        new pageSizeModel { PageID = 50, PageName = "50" },
+        new pageSizeModel { PageID = 100, PageName = "100" },
+        new pageSizeModel { PageID = 200, PageName = "200" },
+        new pageSizeModel { PageID = 500, PageName = "500" },
+        new pageSizeModel { PageID = 1000, PageName = "1000" },
+        new pageSizeModel { PageID = 2000, PageName = "2000" },
+        new pageSizeModel { PageID = 5000, PageName = "5000" },
+        new pageSizeModel { PageID = 500000, PageName = "All" }
+    };
+    public class ModelSearch
+    {
+        public string?  StatusID { get; set; } = "0";
+        public string?  CustID { get; set; } = "";
+        public string?  B_CustID { get; set; } = "";
+        public string?  UserID { get; set; } = "";
+        public string?  Phone { get; set; } = "";
+        public string?  Address { get; set; } = "";
+        public string?  FullName { get; set; } = "";
+        public string?  SSN { get; set; } = "";
+        public string?  DriverID { get; set; } = "";
+        public string?  ToCountry { get; set; } = "All";
+        public string?  ToCountrySearch { get; set; } = "All";
+    }
+    public class ModelUpfile
+    {
+        public string?  FileName { get; set; } = "";
+    }
+    public class ModelStatus
+    {
+        public string?  CustID { get; set; } = "";
+        public string?  Fullname { get; set; } = "";
+        public int StatusID { get; set; } = 0;
+        public string?  ReasonforUpdate { get; set; } = "";
+    }
+    //public DialogOptions dialogOptions = new() { FullWidth = true };
+    public Int64 rowedit = 0;
+    public Int64 rowDoc = 0;
+    bool isUpdateStatus = false;
+    bool Viewhistory = false;
+    bool IsViewDelete = false;
+    bool IsConfirmDelete = false;
+    Int64 idDel = 0;
+    string Noidung = "";
+    string extendFile = "png";
+    public ElementReference E_Noidung ;
+    bool viewSearch = false;
+    bool isEditCustomer = true;
+    public dynamic dates = new Array[] { };
+    public dynamic partners = new Array[] { };
+    public dynamic provinces = new Array[] { };
+    public dynamic branchs = new Array[] { };
+    public dynamic employees = new Array[] { };
+    public dynamic currencies = new Array[] { };
+    public dynamic paymentMethods = new Array[] { };
+    public dynamic batchs = new Array[] { };
+    public dynamic emailStatuses = new Array[] { };
+    public dynamic statuses = new Array[] { };
+    public dynamic searchs = new Array[] { };
+    public bool LoadingReport = false;
+    public string?  isViewingSender = "None";
+    public string?  isDisplayCountry = "None";
+    public bool isViewingReport = false;
+    public bool isViewingSelect = false;
+    public bool editCust = false;
+    public bool editCustSpin = true;
+    public bool isViewbutton = false;
+    public bool isNewRecipient = false;
+    public dynamic reports = null;
+    public dynamic Table = new Array[] { };
+    public dynamic Table1 = new Array[] { };
+    public dynamic Table2 = new Array[] { };
+    public string?  error = "";
+    public string?  ToCountry { get; set; } = "";
+    public string?  ToCountrySelect { get; set; } = "";
+    public string?  CustID { get; set; }
+    public string?  BCustID { get; set; }
+    //public dynamic SenderDocumentsList = new Array[] { };
+    public dynamic EditHistoryList = new Array[] { };
+    public dynamic BlockHistoryList = new Array[] { };
+    public dynamic KYCHistoryList = new Array[] { };
+    public dynamic OFACHistoryList = new Array[] { };
+    public dynamic HoldHistoryList = new Array[] { };
+    public ModelSearch model = new ModelSearch();
+    public ModelStatus modelStatus = new ModelStatus();
+    public List<AgentFile> SenderDocumentsList1 { get; set; } = new List<AgentFile>();
+    public AgentFile ComplianceFile { get; set; } = new AgentFile();
+    public AgentFile ComplianceNote { get; set; } = new AgentFile();
+    public ModelUpfile modelfile = new ModelUpfile();
+    public CustomerAddressCheck modelcheckAddress = new CustomerAddressCheck();
+
+    public List<CustomerProfileFile> SenderDocumentsList { get; set; }= new List<CustomerProfileFile>(); 
+    public List<CustomerProfileFile> SenderDocumentsListDownload { get; set; }= new List<CustomerProfileFile>(); 
+
+    public CustomerList modelEditCust = new CustomerList();
+    public List<ReceiveCountryList> ReceiveCountryList { get; set; }= new List<ReceiveCountryList>();
+    ReceiveCountryList ReceiveCountryLists { get; set; }
+    public string?  ReceiveCountrylist { get; set; }
+
+    public CustomerList[] CustomerList { get; set; }
+
+    public List<CustomerList> CustomerListList { get; set; }= new List<CustomerList>();
+    public List<ReportRecordCountContent> ReportRecordCount { get; set; }
+
+    public List<CustomerComboList> CustomerComboListList { get; set; }= new List<CustomerComboList>();
+    public CustomerComboList[] CustomerComboList { get; set; }
+    CustomerComboList CustomerComboLists { get; set; }
+    public List<TypeofStatusModel> TypeofStatusAllList { get; set; } = new List<TypeofStatusModel>();
+
+    public string?  LinkImage { get; set; } = "bird-wings-flying-feature.gif";
+    public List<RecipientComboList> RecipientComboListList { get; set; }= new List<RecipientComboList>();
+
+    public RecipientComboList[] RecipientComboList { get; set; }
+    RecipientComboList RecipientComboLists { get; set; }
+    public dynamic SendStateList = new Array[] { };
+    public dynamic SendCountryIssueList = new Array[] { };
+    public dynamic SendStateIssueList = new Array[] { };
+    public dynamic IDTypeList = new Array[] { };
+    //public List<CustomerComboList> CustomerComboList { get; set; }
+    //CustomerComboList CustomerComboLists { get; set; }
+
+    //public List<RecipientComboList> RecipientComboList { get; set; }
+
+    public List<TypeofStatusModel> TypeofStatusList { get; set; }= new List<TypeofStatusModel>();
+    TypeofStatusModel TypeofStatuses { get; set; }
+    public string?  TypeofStatus { get; set; }
+
+    public List<HistoryCustomerSendTran> HistoryCustomerSendList { get; set; }= new List<HistoryCustomerSendTran>();
+    public List<HistoryCustomerSendTran> HistoryCustomerSendAllList { get; set; }= new List<HistoryCustomerSendTran>();
+    List<ReportTranSummary> reportSummaryHisList = new List<ReportTranSummary>();
+    SendCountryList SendCountryLists { get; set; }
+    public string?  SendCountrylist { get; set; }
+    string noidungpage = "";
+    int totalPages;
+    Int64 totalRecords;
+    Int64 curPage;
+    int pagerSize;
+    Int64 pageSize;
+    int startPage;
+    int endPage;
+    int firstPage;
+    int lastPage;
+
+
+    string noidungpagehis = "";
+    int totalPageshis;
+    Int64 totalRecordshis;
+    Int64 curPagehis;
+    int pagerSizehis;
+    Int64 pageSizehis;
+    int startPagehis;
+    int endPagehis;
+    int firstPagehis;
+    int lastPagehis;
+
+    public bool isUpdate = false;
+    public bool isLoading;
+    public bool isUploadFile=false;
+    public bool isCheckAddress=false;
+    public bool isViewCompliance=false;
+    public bool isViewNote=false;    
+    public List<IBrowserFile> loadedFiles = new();
+    public string?  C_FileName  { get; set; } = "white!important";
+    public long maxFileSize = 1024 * 15 * 1024;
+    public int maxAllowedFiles = 5;
+    public string?  back { get; set; } = "white!important";
+    public string?  backerror { get; set; } = "yellow!important";
+    public string?  backDisable { get; set; } = "#e9ecee!important";
+
+    public int Height { get; set; } = 800; public int HeightBody { get; set; } = 800;
+    public String MaxHeight { get; set; } = "500px"; public String MaxHeightBody { get; set; } = "800px";
+    public String MaxWeight { get; set; } = "1080px";
+    public ElementReference E_FileName;
+
+    public ElementReference E_CUST_ID;
+    public ElementReference E_FULLNAME ;
+    public ElementReference E_LASTNAME;
+    public ElementReference E_FIRSTNAME ;
+    public ElementReference E_MIDDLENAME ;
+    public ElementReference E_EMAIL ;
+    public ElementReference E_ID_TYPE ;
+    public ElementReference E_DRIVER_ID;
+    public ElementReference E_DRIVER_ID_BK ;
+    public ElementReference E_PASSPORT_NO;
+    public ElementReference E_STATE_ISSUE ;
+    public ElementReference E_EXPIRATION ;
+    public ElementReference E_ADDRESS ;
+    public ElementReference E_CITY;
+    public ElementReference E_STATE ;
+    public ElementReference E_ZIP_CODE ;
+    public ElementReference E_PHONE1 ;
+    public ElementReference E_CountryIssue;
+    public ElementReference E_Occupation ;
+    public ElementReference E_ReasonforUpdate ;
+    public ElementReference E_Comment ;
+    public ElementReference E_CompanyNote ;
+    public ElementReference E_ReasonforBlock ;
+    public ElementReference E_Status ;
+    public ElementReference E_IssueDateBK ;
+    public ElementReference E_SSN_BK ;
+    public ElementReference E_DOB_BK ;
+
+
+    public string?  C_FULLNAME { get; set; } = "#e9ecee!important";
+    public string?  C_LASTNAME { get; set; } = "#e9ecee!important";
+    public string?  C_FIRSTNAME { get; set; } ="#e9ecee!important";
+    public string?  C_MIDDLENAME { get; set; } = "#e9ecee!important";
+    public string?  C_EMAIL { get; set; } = "#e9ecee!important";
+    public string?  C_ID_TYPE { get; set; } = "#e9ecee!important";
+    public string?  C_DRIVER_ID { get; set; } ="#e9ecee!important";
+    public string?  C_DRIVER_ID_BK { get; set; } = "#e9ecee!important";
+    public string?  C_PASSPORT_NO { get; set; } = "#e9ecee!important";
+    public string?  C_STATE_ISSUE { get; set; } = "#e9ecee!important";
+    public string?  C_EXPIRATION { get; set; } = "#e9ecee!important";
+    public string?  C_IssueDateBK { get; set; } = "#e9ecee!important";
+    public string?  C_DOB_BK { get; set; } = "#e9ecee!important";
+    public string?  C_SSN_BK { get; set; } = "#e9ecee!important";
+    public string?  C_ADDRESS { get; set; } = "#e9ecee!important";
+    public string?  C_CITY { get; set; } = "#e9ecee!important";
+    public string?  C_STATE { get; set; } = "#e9ecee!important";
+    public string?  C_ZIP_CODE { get; set; } ="#e9ecee!important";
+    public string?  C_PHONE1 { get; set; } = "#e9ecee!important";
+    public string?  C_CountryIssue { get; set; } = "#e9ecee!important";
+    public string?  C_Occupation { get; set; } = "#e9ecee!important";
+    public string?  C_ReasonforUpdate { get; set; } = "#e9ecee!important";
+    public string?  C_ReasonforBlock { get; set; } = "#e9ecee!important";
+    public string?  C_Comment { get; set; } = "#e9ecee!important";
+    public string?  C_CompanyNote { get; set; } = "#e9ecee!important";
+    public string?  C_Status { get; set; } = "#e9ecee!important";
+
+    public bool D_FULLNAME { get; set; } = true;
+    public bool D_LASTNAME { get; set; } = true;
+    public bool D_FIRSTNAME { get; set; } = true;
+    public bool D_MIDDLENAME { get; set; } = true;
+    public bool D_EMAIL { get; set; } = true;
+    public bool D_ID_TYPE { get; set; } = true;
+    public bool D_DRIVER_ID { get; set; } = true;
+    public bool D_DRIVER_ID_BK { get; set; } = true;
+    public bool D_PASSPORT_NO { get; set; } = true;
+    public bool D_STATE_ISSUE { get; set; } = true;
+    public bool D_EXPIRATION { get; set; } = true;
+    public bool D_ADDRESS { get; set; } = true;
+    public bool D_CITY { get; set; } = true;
+    public bool D_STATE { get; set; } = true;
+    public bool D_ZIP_CODE { get; set; } = true;
+    public bool D_PHONE1 { get; set; } = true;
+    public bool D_CountryIssue { get; set; } = true;
+    public bool D_Occupation { get; set; } = true;
+    public bool D_ReasonforUpdate { get; set; } = true;
+    public bool D_ReasonforBlock { get; set; } = true;
+
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    DialogOptions dialogOptions = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true,CloseOnEscapeKey = false,CloseButton=true,Position=DialogPosition.Center ,DisableBackdropClick=true};
+    DialogOptions dialogOptionsEdit = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = false, CloseButton = true, Position = DialogPosition.Center, DisableBackdropClick = true };
+    DialogOptions dialogOptionsStatus = new DialogOptions() { MaxWidth = MaxWidth.Medium, FullWidth = true, CloseOnEscapeKey = false, CloseButton = true, Position = DialogPosition.Center, DisableBackdropClick = true };
+    int activeIndex = 0;
+    public CultureInfo _en = CultureInfo.GetCultureInfo("en-US");
+    string pagename = "/Customer/SearchCustomer";
+    public List<MenuChildList> menuChildLists { get; set; } = new List<MenuChildList>();
+    public string?  isDisplayUpdate = "initial";
+    public List<TypeTranList> TypeofUpdateList { get; set; } = new List<TypeTranList>();
+    private string displayVerify = "None";
+    private bool isVerify = false;
+    // MudDialog visibility controls
+    private bool isModalVisible = false;
+    private bool isModalStatusVisible = false;
+    private bool isModalProfileVisible = false;
+    bool isExportExcel = false;
+    public async Task PhoneChange(string newValue)
+    {            
+        model.Phone = newValue == null ? "" : newValue.ToString();
+        StateHasChanged();
+    }
+    public async Task AddressChange(string newValue)
+    {            
+        model.Address = newValue == null ? "" : newValue.ToString();
+        StateHasChanged();
+    }
+    public async Task FullNameChange(string newValue)
+    {            
+        
+        model.FullName = newValue == null ? "" : newValue.ToString();
+        StateHasChanged();
+    }
+    public async Task DriverIDChange(string newValue)
+    {            
+        model.DriverID = newValue == null ? "" : newValue.ToString();
+        StateHasChanged();
+    }
+    public async Task SSNChange(string newValue)
+    {            
+        model.SSN = newValue == null ? "" : newValue.ToString();
+        StateHasChanged();
+    }
+    protected async void ExportExcel()
+    {
+        try
+        {
+            isExportExcel = true; StateHasChanged();
+            StateHasChanged();
+            dynamic payload = new
+            {
+                Form = "/Customer/HistoryCustomer",
+                FormName = "History Customer",
+                Action = "/Customer/HistoryCustomerSend",
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                CustID = CustID,
+                AgentID = AuthService.userMTRedSun.AgentID.ToString(),
+                pageIndex = 1,
+                pageSize = 50000
+            };
+
+            HistoryCustomerSendResp resp = await HttpService.Post<HistoryCustomerSendResp>("/Customer/HistoryCustomerSend", payload);
+            if (resp.Status == 200)
+            {
+                HistoryCustomerSendAllList = resp.Content.HistoryCustomerSend;
+                var xls = new Excel();
+                await xls.ExportSenderHistory(JS, HistoryCustomerSendAllList, "HistorySender.xlsx");
+                this.StateHasChanged();
+                toastService.ShowSuccess("Export data successful!");
+            }
+            else
+            {
+                isViewingSender = "none";
+                HistoryCustomerSendAllList = new List<HistoryCustomerSendTran>();
+            }
+            StateHasChanged();
+
+
+
+
+
+        }
+        catch (Exception ex)
+        {
+            isExportExcel = false;
+            // error = ex.Message;
+            //ToastCSS = "e-toast-warning";
+            //ToastIcon = "e-warning toast-icons";
+            //ToastContent = ex.Message;
+            //ToastTitle = "Thông báo";
+            //await this.ToastObj.ShowAsync();
+        }
+
+        isExportExcel = false;
+        StateHasChanged();
+    }
+    protected async void VerifyTransaction()
+    {
+        try
+        {
+            string NoteSubmit = AuthService.userMTRedSun.AgentName.ToString() + " " + AuthService.userMTRedSun.FullName.ToString() + ", I confirm that I have received the notice and agree to comply with the regulations set forth by Honglan Serivces, Inc..";
+            dynamic payload = new
+            {
+                Form = "/Customer/SearchCustomer",
+                FormName = "SearchCustomer",
+                Action = "/Index/GetState",
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = AuthService.userMTRedSun.Id == null ? "" : AuthService.userMTRedSun.Id.ToString(),
+                AgentID = AuthService.userMTRedSun.AgentID == null ? "" : AuthService.userMTRedSun.AgentID.ToString(),
+                NoteSubmit = NoteSubmit,
+                ID = ComplianceNote.No,
+                pageIndex = 1,
+                pageSize = 50
+            };
+
+            var resp = await HttpService.Request("post", "/Index/SubmitComplianceFile", payload);
+            if (resp.Status.ToString() == "200")
+            {
+                isViewCompliance = false;
+                toastService.ShowSuccess("Submit successful!");
+            }
+            StateHasChanged();
+
+        }
+        catch (Exception ex)
+        {
+            isVerify = false;
+        }
+
+        isVerify = false;
+        StateHasChanged();
+    }
+    public void CheckboxClickedVerify(object checkedValue)
+    {
+        if ((bool)checkedValue)
+        {
+            displayVerify = "initial";
+        }
+        else
+        {
+            displayVerify = "None";
+        }
+        StateHasChanged();
+    }
+
+    private async Task OnShowModalStatusClick()
+    {
+        isModalStatusVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task OnHideModalStatusClick()
+    {
+        isModalStatusVisible = false;
+        StateHasChanged();
+    }
+    private async Task OnShowModalProfileClick()
+    {
+        isModalProfileVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task OnHideModalProfileClick()
+    {
+        isModalProfileVisible = false;
+        StateHasChanged();
+    }
+
+    private async Task OnShowModalClick()
+    {
+        isModalVisible = true;
+        StateHasChanged();
+    }
+
+    private async Task OnHideModalClick()
+    {
+        isModalVisible = false;
+        StateHasChanged();
+    }
+
+
+    protected async void ChangeStateIssue(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        modelEditCust.STATE_ISSUE = e.Value.ToString();
+        StateHasChanged();
+    }
+    protected async void ChangeTypeUpdate(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        if(e.Value.ToString()=="Other")
+        {
+            modelEditCust.TypeofUpdate = e.Value.ToString();
+            modelEditCust.ReasonforUpdate = "";
+            isDisplayUpdate = "initial";
+        }
+        else
+        {
+            modelEditCust.TypeofUpdate = e.Value.ToString();
+            modelEditCust.ReasonforUpdate = e.Value.ToString();
+            isDisplayUpdate = "None"; 
+        }
+
+        StateHasChanged();
+    }
+    protected async void ChangeIDType(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        modelEditCust.ID_TYPE = e.Value.ToString();
+        StateHasChanged();
+    }
+    private async void OnValidSubmit()
+    {
+        ViewReport();
+    }
+
+    public async Task KeyPressHandler(KeyboardEventArgs e)
+    {
+        if (e.Key.ToLowerInvariant() == "enter")
+        {
+            await JS.InvokeVoidAsync("sendTab");
+            ViewReport();
+        }
+    }
+    protected async void CloseHis()
+    {
+        Viewhistory=false;
+        StateHasChanged();
+    }
+    public async Task<bool> ValidateUpdate()
+    {  
+        StateHasChanged();
+        bool result=true;
+        bool focus=true;
+        var AhasAddressSymbols = new Regex(@"['~`!@$%^&*()_+=\[{\]};:<>|./?,]");
+        var AhasSymbols = new Regex(@"['~`!@$%^&*()_+=\[{\]};:<>|./?,-]");
+        if(modelEditCust.STATUS==0)
+        {
+            result=false;
+            C_Status = backerror;
+            toastService.ShowWarning("Select Status");
+            await E_Status.FocusAsync();
+            focus = false;
+        }
+        else
+        {
+            C_Status = back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.FIRSTNAME))
+        {
+            result=false;
+            C_FIRSTNAME = backerror;
+            toastService.ShowWarning("Enter First Name");
+            await E_FIRSTNAME.FocusAsync();
+            focus = false;
+        }
+        else
+        {
+            C_FIRSTNAME = back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.LASTNAME))
+        {
+            result=false;
+            C_LASTNAME = backerror;
+            toastService.ShowWarning("Enter Sender Last Name");
+            if(focus)
+            {
+                await E_LASTNAME.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_LASTNAME = back; 
+        }
+        // if(string.IsNullOrEmpty(modelEditCust.ADDRESS))
+        // {
+        //     result=false;
+        //     C_ADDRESS = backerror;
+        //     toastService.ShowWarning("Enter Sender Address");
+        //     if(focus)
+        //     {
+        //         await E_ADDRESS.FocusAsync();
+        //         focus = false;
+        //     }            
+        // }
+        // else
+        // {
+        //     double Num;
+        //     string Str = "";
+        //     string saddress = modelEditCust.ADDRESS;                   
+        //     string[] strArr = saddress.Split(' ');
+        //     if (strArr.Length > 1)
+        //     {
+        //         Str = strArr[0];
+        //     }
+        //     strArr = Str.Split('/');
+        //     if (strArr.Length > 1)
+        //     {
+        //         Str = strArr[0];
+        //     }
+        //     strArr = Str.Split('.');
+        //     if (strArr.Length > 1)
+        //     {
+        //         Str = strArr[0];
+        //     }
+        //     if (AhasSymbols.IsMatch(saddress) || saddress.Contains("  "))
+        //     {
+        //         //erroraddress = true;
+        //         result = false;
+        //         //C_SAddress = backerror;
+        //         toastService.ShowWarning("Sender address without speacial character or double Space");
+        //         if(focus)
+        //         {
+        //             await E_ADDRESS.FocusAsync();
+        //             focus = false;
+        //         }         
+        //     }
+        //     bool isNum = double.TryParse(Str, out Num);
+        //     if (!isNum)
+        //     {
+        //         result=false;
+        //         //errorMessage += "Please edit Address</br>";
+        //         toastService.ShowWarning("Please edit Address");
+        //         if(focus)
+        //         {
+        //             await E_ADDRESS.FocusAsync();
+        //             focus = false;
+        //         }         
+        //     }
+        //     strArr = modelEditCust.ADDRESS.Split(' ');
+        //     if (strArr.Length > 1)
+        //     {
+        //         Str = strArr[1];
+        //     }
+        //     isNum = double.TryParse(Str, out Num);
+        //     if (isNum)
+        //     {
+        //         result=false;
+        //         //errorMessage += "Please edit Address </br>";
+        //         toastService.ShowWarning("Please edit Address");
+        //         if(focus)
+        //         {
+        //             await E_ADDRESS.FocusAsync();
+        //             focus = false;
+        //         }         
+        //     }
+        // }
+        if (string.IsNullOrEmpty(modelEditCust.ADDRESS))
+        {
+            result = false;
+            toastService.ShowWarning("Enter Sender Address");
+            C_ADDRESS = backerror;
+            if(focus)
+            {
+                await E_ADDRESS.FocusAsync();
+                focus = false;
+            }         
+        }
+        else
+        {
+            double Num;
+            string Str = "";
+            modelEditCust.ADDRESS = modelEditCust.ADDRESS.Trim();
+            StateHasChanged();
+            string saddress = modelEditCust.ADDRESS.Trim();
+            if (AuthService.userMTRedSun.SplitList.Count > 0)
+            {
+                foreach (var item in AuthService.userMTRedSun.SplitList)
+                {
+                    saddress = saddress.Replace(item.Daucau, "");
+                }
+            }
+            saddress = saddress.Replace("  ", " ").Trim();
+            if (saddress.Substring(0, 1) == "0")
+            {
+                result = false;
+                toastService.ShowWarning("Sender Address is wrong");
+                C_ADDRESS = backerror;
+                if(focus)
+                {
+                    await E_ADDRESS.FocusAsync();
+                    focus = false;
+                }         
+                // if (string.IsNullOrEmpty(errorstring))
+                // {
+                //     errorstring = "Sender Address is wrong";
+                // }
+                // else
+                // {
+                //     errorstring += "; Sender Address is wrong";
+                // }
+            }
+
+            bool erroraddress = false;
+            string[] strArr = saddress.Split(' ');
+            if (strArr.Length > 1)
+            {
+                Str = strArr[0];
+            }
+            strArr = Str.Split('/');
+            if (strArr.Length > 1)
+            {
+                Str = strArr[0];
+            }
+            strArr = Str.Split('.');
+            if (strArr.Length > 1)
+            {
+                Str = strArr[0];
+            }
+
+            if (AhasAddressSymbols.IsMatch(saddress) || saddress.Contains("  "))
+            {
+                erroraddress = true;
+                result = false;
+                //C_SAddress = backerror;
+                toastService.ShowWarning("Sender address without speacial character or double Space");
+                C_ADDRESS = backerror;
+                if(focus)
+                {
+                    await E_ADDRESS.FocusAsync();
+                    focus = false;
+                }         
+                // if (string.IsNullOrEmpty(errorstring))
+                // {
+                //     errorstring = "Sender address without speacial character or double Space";
+                // }
+                // else
+                // {
+                //     errorstring += ";  Sender address without speacial character or double Space";
+                // }
+                //toastService.ShowWarning("Sender address without speacial character or double Space");
+            }
+            bool isNum = double.TryParse(Str, out Num);
+            if (!isNum)
+            {
+                erroraddress = true;
+                result = false;
+                //C_SAddress = backerror;
+                toastService.ShowWarning("Please edit Address");
+                C_ADDRESS = backerror;
+                if(focus)
+                {
+                    await E_ADDRESS.FocusAsync();
+                    focus = false;
+                }         
+                // if (string.IsNullOrEmpty(errorstring))
+                // {
+                //     errorstring = "Please edit Address";
+                // }
+                // else
+                // {
+                //     errorstring += ";  Please edit Address";
+                // }
+            }
+            strArr = saddress.Split(' ');
+            if (strArr.Length > 1)
+            {
+                Str = strArr[1];
+            }
+            isNum = double.TryParse(Str, out Num);
+            if (isNum)
+            {
+                erroraddress = true;
+                result = false;
+                toastService.ShowWarning("Please edit Address");
+                C_ADDRESS = backerror;
+                if(focus)
+                {
+                    await E_ADDRESS.FocusAsync();
+                    focus = false;
+                }         
+                // C_SAddress = backerror;
+
+                // if (string.IsNullOrEmpty(errorstring))
+                // {
+                //     errorstring = "Please edit Address";
+                // }
+                // else
+                // {
+                //     errorstring += ";  Please edit Address";
+                // }
+            }
+            // if (erroraddress == false)
+            // {
+            //     C_SAddress = back;
+            // }
+        }
+        if (string.IsNullOrEmpty(modelEditCust.Occupation))
+        {
+            result=false;
+            C_Occupation = backerror;
+            toastService.ShowWarning("Enter Occupation");
+            if(focus)
+            {
+                await E_Occupation.FocusAsync();
+                focus = false;
+            }         
+        }
+        if(string.IsNullOrEmpty(modelEditCust.CITY))
+        {
+            result=false;
+            C_CITY = backerror;
+            toastService.ShowWarning("Enter Sender City");
+            if(focus)
+            {
+                await E_CITY.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_CITY = back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.STATE))
+        {
+            result=false;
+            C_STATE = backerror;
+            toastService.ShowWarning("Enter Sender State");
+            if(focus)
+            {
+                await E_STATE.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_STATE = back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.ZIP_CODE))
+        {
+            result=false;
+            C_ZIP_CODE = backerror;
+            toastService.ShowWarning("Enter Sender Zipcode");
+            if(focus)
+            {
+                await E_ZIP_CODE.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_ZIP_CODE= back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.PHONE1))
+        {
+            result=false;
+            // C_PHONE1 = backerror;
+            toastService.ShowWarning("Enter Sender Phone");
+            //if(focus)
+            //{
+            //    await E_PHONE1.FocusAsync();
+            //    focus = false;
+            //}            
+        }
+        else
+        {
+            if (modelEditCust.PHONE1.Substring(0, 1) == "0")
+            {
+                result = false;
+                toastService.ShowWarning("Sender Phone is wrong");
+            }
+        }
+        if(string.IsNullOrEmpty(modelEditCust.Occupation))
+        {
+            result=false;
+            C_Occupation = backerror;
+            toastService.ShowWarning("Enter Occupation");
+            if(focus)
+            {
+                await E_Occupation.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_Occupation= back; 
+        }
+        if(string.IsNullOrEmpty(modelEditCust.ReasonforUpdate) && string.IsNullOrEmpty(modelEditCust.Comment))
+        {
+            result=false;
+            C_ReasonforUpdate = backerror;
+            toastService.ShowWarning("Enter Reason for Update Or Note");
+            if(focus)
+            {
+                await E_ReasonforUpdate.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_ReasonforUpdate= back; 
+        }
+        if(modelEditCust.IssueDateBK!=null)
+        {
+            modelEditCust.ISSUE_DATE = modelEditCust.IssueDateBK.ToString();
+        }
+        if(modelEditCust.EXPIRATIONBK!=null)
+        {
+            modelEditCust.EXPIRATION = modelEditCust.EXPIRATIONBK.ToString();
+        }
+        if(modelEditCust.DOB_BK1!=null)
+        {
+            modelEditCust.DOB = modelEditCust.DOB_BK1.ToString();
+            modelEditCust.DOB_BK = modelEditCust.DOB_BK1.ToString();
+        }
+        if(modelEditCust.DRIVER_ID_BK!=null)
+        {
+            modelEditCust.DRIVER_ID = modelEditCust.DRIVER_ID_BK.ToString();
+        }
+        if(modelEditCust.SSN_BK!=null)
+        {
+            modelEditCust.SSN = modelEditCust.SSN_BK.ToString();
+        }
+        StateHasChanged();
+        return result;
+    }
+    public async Task<bool> ValidateStatus()
+    {  
+        StateHasChanged();
+        bool result=true;
+        bool focus=true;
+        if(string.IsNullOrEmpty(modelStatus.ReasonforUpdate))
+        {
+            result=false;
+            C_ReasonforUpdate = backerror;
+            toastService.ShowWarning("Enter Note");
+            await E_ReasonforUpdate.FocusAsync();
+            focus = false;
+        }
+        else
+        {
+            C_ReasonforUpdate = back; 
+        }
+        if(modelStatus.StatusID==0)
+        {
+            result=false;
+            C_Status = backerror;
+            toastService.ShowWarning("Select Status");
+            if(focus)
+            {
+                await E_Status.FocusAsync();
+                focus = false;
+            }            
+        }
+        else
+        {
+            C_Status = back; 
+        }
+
+        StateHasChanged();
+        return result;
+    }
+    public async Task DownloadFileFromStreamNew()
+    {
+        try
+        {
+            dynamic payload = new
+            {
+                Form = "/Customer/SearchCustomer",
+                FormName = "Search Customer",
+                Action = "DownloadFileFromStreamNew",
+                UserName=AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                AgentID = AuthService.userMTRedSun.AgentID.ToString(),
+                pageIndex = 1,
+                pageSize = 50
+            };
+            AgentFileResps respdoc = await HttpService.Post<AgentFileResps>
+             ("/Index/GetComplianceFile", payload);
+            if (respdoc.Status.ToString() == "200")
+            { 
+                SenderDocumentsList1 = respdoc.Content.AgentFileLists;
+                ComplianceNote.No= SenderDocumentsList1[0].No == null ? 0:Convert.ToInt16( SenderDocumentsList1[0].No);
+                ComplianceNote.Comment = SenderDocumentsList1[0].NOIDUNG == null ? "" : SenderDocumentsList1[0].NOIDUNG;
+                ComplianceNote.NOIDUNG = SenderDocumentsList1[0].Comment == null ? "" : SenderDocumentsList1[0].Comment;
+                ComplianceFile = SenderDocumentsList1[0]; 
+                string ApiURL = Configuration.GetValue<string>("ApiURL");
+                LinkImage = ApiURL + "/Receipt/Compliance/" + AuthService.userMTRedSun.AgentID.ToString() + "/" + ComplianceFile.CPI_NAME;
+                isViewCompliance=true;
+            }
+            else
+            {
+                isViewCompliance=false;    
+                SenderDocumentsList1= new List<AgentFile>();
+                ComplianceFile  = new AgentFile();
+            }
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        StateHasChanged();
+    }
+    public void LoadFiles(InputFileChangeEventArgs e)
+    {
+        isLoading = true;
+        loadedFiles.Clear();
+        StateHasChanged();
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            try
+            {
+                loadedFiles.Add(file);
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowWarning("File:" + file.Name + ", Error: " + ex.Message);
+                //    file.Name, ex.Message);
+                //Logger.LogError("File: {Filename} Error: {Error}", 
+                //    file.Name, ex.Message);
+            }
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+    protected async void getCutomerFile()
+    {
+        dynamic payload1 = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "CustomerProfileFile",
+            UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CustID = modelEditCust.CUST_ID,
+            pageIndex = 1,
+            pageSize = 50
+        };
+        CustomerProfileFileResp respdoc = await HttpService.Post<CustomerProfileFileResp>
+        ("/Customer/CustomerProfileFile", payload1);
+        if (respdoc.Status.ToString() == "200")
+        {
+
+            SenderDocumentsList = respdoc.Content;
+
+        }
+        else
+        {
+            //toastService.ShowWarning(respdoc.Message.ToString());
+            SenderDocumentsList = new List<CustomerProfileFile>();
+        }
+        StateHasChanged();
+    }
+    protected async void UploadFile()
+    {
+        try
+        {
+            StateHasChanged();
+
+            isUploadFile=true;
+            if (await ValidateUpload())
+            {
+                List<CustomerProfileFile> SenderDocumentsLists = new List<CustomerProfileFile>();
+                foreach (var file in loadedFiles)
+                {
+                    CustomerProfileFile SenderDocumentsfile = new CustomerProfileFile();
+                    SenderDocumentsfile.FileName1 = modelfile.FileName;
+                    SenderDocumentsfile.FileName = file.Name.ToString();
+                    var buffers = new byte[file.Size];
+                    await file.OpenReadStream(maxFileSize).ReadAsync(buffers);
+
+                    SenderDocumentsfile.FileLoad = buffers;
+                    SenderDocumentsLists.Add(SenderDocumentsfile);
+                }
+                if (SenderDocumentsLists.Count > 0)
+                {
+                    UploadFileModel modelf = new UploadFileModel();  
+                    modelf.UserID=model.UserID;
+                    modelf.CUST_ID=modelEditCust.CUST_ID;
+                    modelf.SenderDocumentsLists=SenderDocumentsLists;
+                    StateHasChanged();
+                    var resp = await HttpService.Request("post", "/Customer/UploadCustomerProfileFile", modelf);                  
+                    if (resp.Status.ToString() == "200")
+                    {
+                        loadedFiles.Clear();
+                        loadedFiles = new();
+                        modelfile.FileName = "";
+                        StateHasChanged();
+                        getCutomerFile();
+                        toastService.ShowSuccess("File upload successful");
+
+
+                    }
+                    else
+                    {
+                        toastService.ShowWarning(resp.Message.ToString());
+                    }
+                }
+            }
+
+        }
+        catch(Exception ex)
+        {
+            isUploadFile = false;
+            toastService.ShowWarning(ex.Message);
+        }
+        isUploadFile = false;
+        StateHasChanged();
+    }
+    protected async void CheckAddress()
+    {
+        try
+        {
+            StateHasChanged();
+
+            isCheckAddress=true;
+            var resp = await HttpService.Request("post", "/Customer/ApiCheckAddress", modelcheckAddress);
+            if (resp.Status.ToString() == "200")
+            {
+                modelcheckAddress = resp.Content;
+
+            }
+            else
+            {
+                modelcheckAddress = new CustomerAddressCheck();
+                toastService.ShowWarning(resp.Message.ToString());
+            }
+        }
+        catch(Exception ex)
+        {
+            isCheckAddress = false;
+            toastService.ShowWarning(ex.Message);
+        }
+        isCheckAddress = false;
+        StateHasChanged();
+    }
+    public async Task<bool> ValidateUpload()
+    {
+        bool result=true;
+        if(loadedFiles.Count==0)
+        {
+            toastService.ShowWarning("Nothing to Upload");
+            result=false;
+        }
+        if(string.IsNullOrEmpty( modelfile.FileName))
+        {
+            C_FileName = backerror;          
+            await E_FileName.FocusAsync();           
+            toastService.ShowWarning("Enter File Name");
+            result=false;
+        }
+        StateHasChanged();
+
+        return result;
+    }
+    public void EnableButton(HistoryCustomerSendTran item, object checkedValue)
+    {
+        if (checkedValue.ToString().Contains("Select"))
+        {
+            item.DisableButton = false;
+            item.NewLink = "";
+        }
+        else
+        {
+            item.DisableButton = true;
+            item.NewLink = "/Transaction/NewTransaction?Custid=" +item.CUST_ID + "&BCustid=&fc=US" + "&tc=" + checkedValue.ToString().ToString();
+        }
+        StateHasChanged();
+    }
+    public async Task NavigateToPage(string direction)
+    {
+        switch (direction)
+        {
+            case "first":
+                SetPageSize("first");
+                curPage = startPage;
+                break;
+            case "next":
+                if (curPage < totalPages)
+                {
+                    if (curPage == endPage)
+                    {
+                        SetPageSize("forward");
+                    }
+                    curPage += 1;
+                }
+                break;
+            case "prev":
+                if (curPage > 1)
+                {
+                    if (curPage == startPage)
+                    {
+                        SetPageSize("back");
+                    }
+                    curPage -= 1;
+
+                }
+                break;
+            default:
+                SetPageSize("last");
+                curPage = totalPages;
+                break;
+        }
+
+        RefreshRecord(curPage);
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task refreshNoidung()
+    {
+        this.StateHasChanged();
+        Int64 Totalre = curPage * pageSize;
+        if (Totalre > totalRecords)
+        {
+            Totalre = totalRecords;
+        }
+        noidungpage = "Showing " + (((curPage - 1) * pageSize) + 1).ToString() + " to " + Totalre + " of " + totalRecords + " entries";
+        this.StateHasChanged();
+    }
+    public async Task SetPageSize(string direction)
+    {
+        this.StateHasChanged();
+        if (direction == "forward" && endPage < totalPages)
+        {
+            startPage = endPage + 1;
+            if (endPage + pagerSize < totalPages)
+            {
+                endPage = startPage + pagerSize - 1;
+            }
+            else
+            {
+                endPage = totalPages;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage == endPage)
+            {
+                startPage = endPage - pagerSize + 1;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+        }
+        else if (direction == "back" && startPage > 1)
+        {
+            startPage = startPage - 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "first")
+        {
+            startPage = 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "last")
+        {
+            startPage = totalPages - pagerSize + 1;
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            endPage = totalPages;
+
+        }
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task RefreshRecord(Int64 currentPage)
+    {
+        curPage = currentPage;
+        await getData();
+        await refreshNoidung();
+
+        this.StateHasChanged();
+    }
+    public async Task NavigateToPagehis(string direction)
+    {
+        switch (direction)
+        {
+            case "first":
+                SetPageSizehis("first");
+                curPagehis = startPagehis;
+                break;
+            case "next":
+                if (curPagehis < totalPageshis)
+                {
+                    if (curPagehis == endPagehis)
+                    {
+                        SetPageSizehis("forward");
+                    }
+                    curPagehis += 1;
+                }
+                break;
+            case "prev":
+                if (curPagehis > 1)
+                {
+                    if (curPagehis == startPagehis)
+                    {
+                        SetPageSizehis("back");
+                    }
+                    curPage -= 1;
+
+                }
+                break;
+            default:
+                SetPageSizehis("last");
+                curPagehis = totalPageshis;
+                break;
+        }
+
+        RefreshRecordhis(curPagehis);
+        refreshNoidunghis();
+        this.StateHasChanged();
+    }
+    public async Task refreshNoidunghis()
+    {
+        this.StateHasChanged();
+        Int64 Totalre = curPagehis * pageSizehis;
+        if (Totalre > totalRecordshis)
+        {
+            Totalre = totalRecordshis;
+        }
+        noidungpage = "Showing " + (((curPagehis - 1) * pageSizehis) + 1).ToString() + " to " + Totalre + " of " + totalRecordshis + " entries";
+        this.StateHasChanged();
+    }
+    public async Task SetPageSizehis(string direction)
+    {
+        this.StateHasChanged();
+        if (direction == "forward" && endPagehis < totalPageshis)
+        {
+            startPagehis = endPagehis + 1;
+            if (endPagehis + pagerSizehis < totalPageshis)
+            {
+                endPagehis = startPagehis + pagerSizehis - 1;
+            }
+            else
+            {
+                endPagehis = totalPageshis;
+            }
+            if (endPagehis > totalPageshis)
+            {
+                endPagehis = totalPageshis;
+            }
+            if (startPagehis == endPagehis)
+            {
+                startPagehis = endPagehis - pagerSizehis + 1;
+            }
+            if (startPagehis <= 0)
+            {
+                startPagehis = 1;
+            }
+        }
+        else if (direction == "back" && startPagehis > 1)
+        {
+            startPagehis = startPagehis - 1;
+            endPagehis = startPagehis + pagerSizehis - 1;
+            if (endPagehis > totalPageshis)
+            {
+                endPagehis = totalPageshis;
+            }
+            if (startPagehis <= 0)
+            {
+                startPagehis = 1;
+            }
+            if (endPagehis > totalPageshis)
+            {
+                endPagehis = totalPageshis;
+            }
+        }
+        else if (direction == "first")
+        {
+            startPagehis = 1;
+            endPagehis = startPagehis + pagerSizehis - 1;
+            if (endPagehis > totalPageshis)
+            {
+                endPagehis = totalPageshis;
+            }
+        }
+        else if (direction == "last")
+        {
+            startPagehis = totalPageshis - pagerSizehis + 1;
+            if (startPagehis <= 0)
+            {
+                startPagehis = 1;
+            }
+            endPagehis = totalPageshis;
+
+        }
+        refreshNoidunghis();
+        this.StateHasChanged();
+    }
+    public async Task RefreshRecordhis(Int64 currentPage)
+    {
+        curPagehis = currentPage;
+        await getDataHis();
+        await refreshNoidung();
+
+        this.StateHasChanged();
+    }
+    public async Task getData( string Form = "",string FormName = "",string Action = "")
+    {
+        try{
+            StateHasChanged();
+            LoadingReport = true;
+            dynamic payload = new
+            {
+                Form = Form,
+                FormName = FormName,
+                Action = Action,
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                ToCountry = model.ToCountry,
+                Phone = model.Phone,
+                FullName = model.FullName,
+                Address = model.Address,
+                SSN = model.SSN,
+                DriverID = model.DriverID,
+                StatusID = model.StatusID,
+                pageIndex = curPage,
+                pageSize = pageSize
+            };       
+
+            SearchCustomerResp resp = await HttpService.Post<SearchCustomerResp>
+                        ("/Customer/SearchCustomer", payload);
+            if (resp.Status == 200)
+            {
+                viewSearch = true;
+                CustomerListList = resp.Content.CustomerList;
+                CustomerComboListList = resp.Content.CustomerComboList;
+                ReportRecordCount = resp.Content.ReportRecordCount;
+                foreach (var item in ReportRecordCount)
+                {
+                    totalRecords = Convert.ToInt64(item.NoofTran);
+                }
+                totalPages = (int)Math.Ceiling(totalRecords / (decimal)pageSize);
+                isViewingSender = "contents";
+                if(CustomerListList.Count==0)
+                {
+                    toastService.ShowWarning("Nothing to view");
+                }
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+
+                CustomerListList = new List<CustomerList>();
+                CustomerComboListList = new List<CustomerComboList>();
+                ReportRecordCount = new List<ReportRecordCountContent>();
+                totalRecords =0;
+                totalPages =0;
+                isViewingSender = "None";
+                viewSearch=false;
+            }
+            LoadingReport = false;
+        }
+        catch(Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        
+        this.StateHasChanged();
+    }
+    public async Task getDataHis(string Form = "", string FormName = "", string Action = "")
+    {
+        StateHasChanged();
+        dynamic payload = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "HistoryTransaction",
+            UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CustID = CustID,
+            AgentID = AuthService.userMTRedSun.AgentID.ToString(),
+            pageIndex = curPagehis,
+            pageSize = pageSizehis
+        };
+
+        HistoryCustomerSendResp resp = await HttpService.Post<HistoryCustomerSendResp>("/Customer/HistoryCustomerSend", payload);
+        if (resp.Status == 200)
+        {
+            HistoryCustomerSendList = resp.Content.HistoryCustomerSend;
+            reportSummaryHisList = resp.Content.ReportSummary;    
+
+            totalRecordshis = reportSummaryHisList[0].NoofTran; 
+            this.StateHasChanged();
+            totalPageshis = (int)Math.Ceiling(totalRecordshis / (decimal)pageSizehis);
+            isViewingSender = "contents";
+            await OnShowModalClick();
+        }
+        else
+        {
+            if (resp.Status == 99)
+            {
+                toastService.ShowWarning("User is not Exist or Expire");
+                await AuthService.Logout();
+            }
+            isViewingSender = "none";
+            HistoryCustomerSendList = new List<HistoryCustomerSendTran>();
+        }
+        this.StateHasChanged();
+    }
+    protected async Task ChangepageSize(ChangeEventArgs e)
+    {
+        pageSize = Convert.ToInt64(e.Value.ToString());
+        curPage = 1;
+        pagerSize = 5;
+        startPage = 1;
+        endPage = 0;
+
+        await getData();
+        await SetPageSize("forward");
+        await refreshNoidung();
+        StateHasChanged();
+    }
+    protected async Task ChangepageSizehis(ChangeEventArgs e)
+    {
+        pageSizehis = Convert.ToInt64(e.Value.ToString());
+        curPagehis = 1;
+        pagerSizehis = 5;
+        startPagehis = 1;
+        endPagehis = 0;
+
+        await getDataHis();
+        await SetPageSizehis("forward");
+        await refreshNoidunghis();
+        StateHasChanged();
+    }
+    protected async void ChangeCountryIssue(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        modelEditCust.COUNTRY_ISSUE = e.Value.ToString();
+
+
+        dynamic payload = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "ChangeCountryIssue",
+            UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CountryCode = modelEditCust.COUNTRY_ISSUE,
+            pageIndex = 1,
+            pageSize = 50
+        };
+
+        var resp = await HttpService.Request("post", "/Index/GetState", payload);
+        if (resp.Status.ToString() == "200")
+        {
+            SendStateIssueList = resp.Content.StateList;
+            if (resp.Content.StateList.Count > 0)
+            {
+                modelEditCust.STATE_ISSUE= SendStateIssueList[0].StateCode.ToString();
+            }
+        }
+
+        StateHasChanged();
+    }
+    protected async void ChangeNewCountryIssue()
+    {
+        dynamic payload = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "ChangeNewCountryIssue",
+            UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CountryCode = modelEditCust.COUNTRY_ISSUE,
+            pageIndex = 1,
+            pageSize = 50
+        };
+
+        var resp = await HttpService.Request("post", "/Index/GetState", payload);
+        if (resp.Status.ToString() == "200")
+        {
+            SendStateIssueList = resp.Content.StateList;
+        }
+
+        StateHasChanged();
+    }
+    public async Task CloseDelete()
+    {
+        IsViewDelete = false;
+        this.StateHasChanged();
+
+    }
+    public async Task CloseHistory()
+    {
+        Viewhistory = false;
+        this.StateHasChanged();
+    }
+
+    public async Task MouseOut()
+    {
+        Viewhistory = false;
+        this.StateHasChanged();
+    }
+    public async Task MouseIn()
+    {
+        Viewhistory = true;
+        this.StateHasChanged();
+    }
+
+
+    public async Task CloseCompliance()
+    {
+        isViewCompliance = false;
+        this.StateHasChanged();
+
+    }
+    public async Task CloseEditModel()
+    {
+        await OnHideModalProfileClick();
+        this.StateHasChanged();
+
+    }
+    public async Task EditStatus(string CustID,string FullName,int? StatusId)
+    {
+        // isUpdateStatus = true;
+        modelStatus= new ModelStatus();
+        modelStatus.CustID = CustID;
+        modelStatus.Fullname=FullName;
+        C_Status = back;
+        C_ReasonforUpdate = back;
+        modelStatus.StatusID=Convert.ToInt16(StatusId);
+        modelStatus.ReasonforUpdate="";
+        await OnShowModalStatusClick();
+        this.StateHasChanged();
+    }
+    public async Task CloseStatus()
+    {
+
+        await OnHideModalStatusClick();
+        this.StateHasChanged();
+    }
+    public async Task UpdateStatus()
+    {
+        try
+        {            
+            this.StateHasChanged();
+            if(await ValidateStatus())
+            {                
+                dynamic payload = new
+                {
+                    Form = "/Customer/SearchCustomer",
+                    FormName = "Search Customer",
+                    Action = "UpdateCustomerStatus",
+                    UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                    UserID = AuthService.userMTRedSun.Id.ToString(),
+                    CustID = modelStatus.CustID ,
+                    StatusID = modelStatus.StatusID,
+                    ReasonforUpdate= modelStatus.ReasonforUpdate
+                };
+                var resp = await HttpService.Request("post", "/Customer/UpdateCustomerStatus", payload);
+                if (resp.Status.ToString() == "200")
+                {
+                    isUpdateStatus = false;
+                    toastService.ShowSuccess("Update Status Successful");
+                    ViewReport();
+                }
+                else
+                {
+                    toastService.ShowError(resp.Message.ToString());
+                }
+            }
+        }        
+        catch(Exception ex)
+        {
+            toastService.ShowError(ex.Message.ToString());
+        }
+        this.StateHasChanged();
+    }
+    public async Task UpdateProfile()
+    {
+        try
+        {
+            isUpdate = true;
+            this.StateHasChanged();
+
+            if(await ValidateUpdate())
+            {
+                dynamic payload = new
+                {    
+                    Form = "/Customer/SearchCustomer",
+                    FormName = "Search Customer",
+                    Action = "UpdateProfile",
+                    UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                    UserID = modelEditCust.UserID,
+                    CUST_ID = modelEditCust.CUST_ID,
+                    FIRSTNAME = modelEditCust.FIRSTNAME,
+                    MIDDLENAME = modelEditCust.MIDDLENAME,
+                    LASTNAME = modelEditCust.LASTNAME,
+                    ADDRESS = modelEditCust.ADDRESS,
+                    STATE = modelEditCust.STATE,
+                    CITY = modelEditCust.CITY,
+                    ZIP_CODE = modelEditCust.ZIP_CODE,
+                    PHONE1 = modelEditCust.PHONE1,
+                    EMAIL = modelEditCust.EMAIL,
+                    ID_TYPE = modelEditCust.ID_TYPE,
+                    DRIVER_ID = modelEditCust.DRIVER_ID_BK,
+                    DRIVER_ID_BK = modelEditCust.DRIVER_ID_BK,
+                    ID = modelEditCust.DRIVER_ID_BK,
+                    ID_BK = modelEditCust.DRIVER_ID_BK,
+                    COUNTRY_ISSUE = modelEditCust.COUNTRY_ISSUE,
+                    STATE_ISSUE = modelEditCust.STATE_ISSUE,
+                    ISSUE_DATE = modelEditCust.IssueDateBK,
+                    EXPIRATION = modelEditCust.EXPIRATIONBK,
+                    DOB = modelEditCust.DOB_BK1,
+                    DOB_BK = modelEditCust.DOB_BK1,
+                    SSN = modelEditCust.SSN_BK,
+                    SSN_BK = modelEditCust.SSN_BK,
+                    STATUS=modelEditCust.STATUS,
+                    OCCUPATION = modelEditCust.Occupation,
+                    ReasonforBlock = modelEditCust.ReasonforBlock,
+                    ReasonforUpdate = modelEditCust.ReasonforUpdate,
+                    Comment = modelEditCust.Comment,
+                    CompanyNote = modelEditCust.CompanyNote
+                };
+                this.StateHasChanged();
+
+                var resp = await HttpService.Request("post", "/Customer/UpdateCustomerProfile", payload);
+                if (resp.Status.ToString() == "200")
+                {
+                    toastService.ShowSuccess("Update Status Successful");
+                    ViewReport();
+                    editCust = false;
+                }
+                else
+                {
+                    if (resp.Status == 99)
+                    {
+                        toastService.ShowWarning("User is not Exist or Expire");
+                        await AuthService.Logout();
+                    }
+                    else
+                    {
+                        toastService.ShowWarning(resp.Message.ToString());
+                    }
+                    EditHistoryList = new Array[] { };
+                }
+            }
+        }        
+        catch(Exception ex)
+        {
+            toastService.ShowError(ex.Message.ToString());
+        }
+        isUpdate = false;
+        this.StateHasChanged();
+    }
+    public async Task EditDocument(string CustID)
+    {
+        editCust = true;
+        this.StateHasChanged();
+    }
+    public async Task HistoryTransaction(string CustID1)
+    {
+        this.StateHasChanged();
+        pageSizehis = 50;
+        curPagehis = 1;
+        pagerSizehis = 5;
+        startPagehis = 1;
+        endPagehis = 0;
+        CustID = CustID1;
+        this.StateHasChanged();
+        await getDataHis();
+        await SetPageSizehis("forward");
+        await refreshNoidunghis();
+        this.StateHasChanged();
+    }
+    public async Task EditCustomer(string CustID)
+    {
+        try
+        {
+            StateHasChanged();
+            C_FULLNAME =backDisable;
+            C_LASTNAME =backDisable;
+            C_FIRSTNAME =backDisable;
+            C_MIDDLENAME =backDisable;
+            C_EMAIL=backDisable;
+            C_ID_TYPE=backDisable;
+            C_DRIVER_ID =backDisable;
+            C_DRIVER_ID_BK=backDisable;
+            C_PASSPORT_NO =backDisable;
+            C_STATE_ISSUE =backDisable;
+            C_EXPIRATION=backDisable;
+            C_IssueDateBK =backDisable;
+            C_DOB_BK =backDisable;
+            C_SSN_BK =backDisable;
+            C_ADDRESS=backDisable;
+            C_CITY =backDisable;
+            C_STATE =backDisable;
+            C_ZIP_CODE=backDisable;
+            C_PHONE1=backDisable;
+            C_CountryIssue =backDisable;
+            C_Occupation =backDisable;
+            C_ReasonforUpdate=backDisable;
+            C_ReasonforBlock=backDisable;
+            C_Status=backDisable;
+            // editCust = true;
+            editCustSpin = true;
+            isEditCustomer = true;
+            modelEditCust = new CustomerList();
+            rowedit = 0;
+            rowDoc = 0;
+            SenderDocumentsList = new List<CustomerProfileFile>();
+            this.StateHasChanged();
+
+            dynamic payload = new
+            {
+
+                Form = "/Customer/SearchCustomer",
+                FormName = "Search Customer",
+                Action = "CustomerProfile",
+                UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                CustID = CustID,
+                pageIndex = 1,
+                pageSize = 50
+            };
+            DateTime DOB = Convert.ToDateTime("1900/01/01");
+            DateTime EXPIRATION = Convert.ToDateTime("1900/01/01");
+            DateTime IssueDate = Convert.ToDateTime("1900/01/01");
+            tblCustomerListResp CustomerListresp = await HttpService.Post<tblCustomerListResp>
+            ("/Customer/CustomerProfile", payload);
+            if (CustomerListresp.Status == 200)
+            {
+                foreach (var item in CustomerListresp.Content)
+                {
+                    modelEditCust.UserName = AuthService.userMTRedSun.UserName.ToString();
+                    modelEditCust.UserID = AuthService.userMTRedSun.Id.ToString();
+                    modelEditCust.CUST_ID = item.CUST_ID == null ? "" : item.CUST_ID;
+                    modelEditCust.FIRSTNAME = item.FIRSTNAME == null ? "" : item.FIRSTNAME;
+                    modelEditCust.MIDDLENAME = item.MIDDLENAME == null ? "" : item.MIDDLENAME;
+                    modelEditCust.LASTNAME = item.LASTNAME == null ? "" : item.LASTNAME;
+                    modelEditCust.ADDRESS = item.ADDRESS == null ? "" : item.ADDRESS;
+                    modelEditCust.CITY = item.CITY == null ? "" : item.CITY;
+                    modelEditCust.STATE = item.STATE == null ? "" : item.STATE;
+                    modelEditCust.ZIP_CODE = item.ZIP_CODE == null ? "" : item.ZIP_CODE;
+                    modelEditCust.PHONE1 = item.PHONE1 == null ? "" : item.PHONE1;
+                    modelEditCust.EMAIL = item.EMAIL == null ? "" : item.EMAIL;
+                    modelEditCust.ID_TYPE = item.ID_TYPE == null ? "" : item.ID_TYPE;
+                    modelEditCust.DRIVER_ID_BK = item.DRIVER_ID_BK == null ? "" : item.DRIVER_ID_BK;
+                    modelEditCust.COUNTRY_ISSUE = item.COUNTRY_ISSUE == null ? "" : item.COUNTRY_ISSUE;
+                    ChangeNewCountryIssue();
+                    modelEditCust.STATE_ISSUE = item.STATE_ISSUE == null ? "" : item.STATE_ISSUE;
+                    if(!string.IsNullOrEmpty( item.ISSUE_DATE ))
+                    {
+                        modelEditCust.ISSUE_DATE =  item.ISSUE_DATE;                       
+                        DateTime.TryParse(modelEditCust.ISSUE_DATE, out IssueDate);
+                        if(!IssueDate.ToString().Contains("0001"))
+                        {
+                            modelEditCust.IssueDateBK = IssueDate;
+                        } 
+                    }   
+                    if(!string.IsNullOrEmpty( item.EXPIRATION ))
+                    {
+                        modelEditCust.EXPIRATION = item.EXPIRATION;
+                        DateTime.TryParse(modelEditCust.EXPIRATION, out EXPIRATION);
+                        if(!EXPIRATION.ToString().Contains("0001"))
+                        {
+                            modelEditCust.EXPIRATIONBK = EXPIRATION;
+                        }                      
+                    }    
+
+
+                    if(!string.IsNullOrEmpty( item.DOB ))
+                    {
+                        modelEditCust.DOB_BK =item.DOB_BK;
+                        DateTime.TryParse(modelEditCust.DOB_BK, out DOB);
+                        if(!DOB.ToString().Contains("0001"))
+                        {
+                            modelEditCust.DOB_BK1 = DOB;
+                        }                       
+                    }
+
+                    modelEditCust.STATUS = item.STATUS == null ? 1 : item.STATUS;
+                    modelEditCust.SSN_BK = item.SSN_BK == null ? "" : item.SSN_BK;
+                    modelEditCust.Occupation = item.Occupation == null ? "" : item.Occupation;
+                    modelEditCust.ReasonforBlock = item.ReasonforBlock == null ? "" : item.ReasonforBlock;
+                    modelEditCust.CompanyNote = item.CompanyNote == null ? "" : item.CompanyNote;
+                    modelEditCust.ReasonforUpdate = "";
+                    modelEditCust.TypeofUpdate = TypeofUpdateList[0].TypeID;
+                }
+                 await OnShowModalProfileClick();
+            }
+            else
+            {
+                if (CustomerListresp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+            }
+            editCustSpin = false;
+
+            StateHasChanged();
+            var resp = await HttpService.Request("post", "/Customer/CustomerProfileHistory", payload);
+            if (resp.Status.ToString() == "200")
+            {
+                EditHistoryList = resp.Content;
+                this.StateHasChanged();
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                EditHistoryList = new Array[] { };
+            }
+            StateHasChanged();
+            //    CustomerAddressResp CustomerAddressresp = await HttpService.Post<CustomerAddressResp>
+            //   ("/Customer/CustomerProfileGetAddress", payload);
+            //    if (CustomerAddressresp.Status == 200)
+            //    {
+            //        foreach (var item in CustomerAddressresp.Content)
+            //        {
+            //          modelcheckAddress.CUST_ID=item.CUST_ID;
+            //          modelcheckAddress.ADDRESS=item.ADDRESS;
+            //          modelcheckAddress.StatusName=item.StatusName;
+            //            modelcheckAddress.CITY = item.CITY;
+            //            modelcheckAddress.FULLRESPONSE=item.FULLRESPONSE;
+            ////          public string?  CUST_ID { get; set; }
+            ////public string?  ADDRESS { get; set; }
+            ////public string?  CITY { get; set; }
+            ////public string?  STATE { get; set; }
+            ////public string?  ZIP_CODE { get; set; }
+            ////public string?  COUNTRY { get; set; }
+            ////public string?  FULLADDRESS { get; set; }
+            ////public string?  PHONE1 { get; set; }
+            ////public string?  StatusName { get; set; }
+            ////public string?  FULLRESPONSE { get; set; }
+            //        }
+            //    }
+            //    else
+            //    {
+            //        modelcheckAddress = new CustomerAddressCheck();
+            //    }
+
+            //var respAdd = await HttpService.Request("post", "/Customer/CustomerProfileGetAddress", payload);
+            //if (respAdd.Status.ToString() == "200")
+            //{
+            //    modelcheckAddress = respAdd.Content;
+            //}
+            //else
+            //{
+            //    if (resp.Status == 99)
+            //    {
+            //        toastService.ShowWarning("User is not Exist or Expire");
+            //        await AuthService.Logout();
+            //    }
+            //    modelcheckAddress = new CustomerAddressCheck();
+            //}
+            // CustomerProfileFileResp
+            //var respdoc = await HttpService.Request("post", "/Customer/CustomerProfileFile", payload);
+
+            getCutomerFile();
+            StateHasChanged();
+            var respBlock = await HttpService.Request("post", "/Customer/CustomerProfileBlockHistory", payload);
+            if (respBlock.Status.ToString() == "200")
+            {
+                BlockHistoryList = respBlock.Content;
+            }
+            else
+            {
+                BlockHistoryList = new Array[] { };
+            }
+
+            var respHold = await HttpService.Request("post", "/Customer/CustomerProfileHoldHistory", payload);
+            if (respHold.Status.ToString() == "200")
+            {
+                HoldHistoryList = respHold.Content;
+            }
+            else
+            {
+                HoldHistoryList = new Array[] { };
+            }
+            StateHasChanged();
+            var respKyc = await HttpService.Request("post", "/Customer/CustomerProfileKYC", payload);
+            if (respKyc.Status.ToString() == "200")
+            {
+                KYCHistoryList = respKyc.Content;
+            }
+            else
+            {
+                KYCHistoryList = new Array[] { };
+            }
+            StateHasChanged();
+            var respOfac = await HttpService.Request("post", "/Customer/CustomerProfileOFAC", payload);
+            if (respOfac.Status.ToString() == "200")
+            {
+                OFACHistoryList = respOfac.Content;
+            }
+            else
+            {
+                OFACHistoryList = new Array[] { };
+            }
+            StateHasChanged();
+        }
+        catch(Exception ex)
+        {
+            editCust = true;
+            editCustSpin = false;
+            this.StateHasChanged();
+            toastService.ShowWarning(ex.Message);
+        }
+        editCustSpin = false;
+        this.StateHasChanged();
+
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Initialize auth service for Blazor Server
+            await AuthService.Initialize();
+            if (AuthService.userMTRedSun == null)
+            {
+                await AuthService.Logout();
+                return;
+            }
+            else
+            {
+            menuChildLists = AuthService.userMTRedSun.MenuChildList.ToList();
+            if (menuChildLists.Count > 0)
+            {
+                List<MenuChildList> menuChildList = new List<MenuChildList>();
+                menuChildList = menuChildLists.Where(x => x.LinkPageColor == pagename).ToList();
+                if (menuChildList.Count == 0)
+                {
+                    toastService.ShowWarning("This function is not authorized!", "Warning");
+                    await AuthService.Logout();
+                }
+            }
+
+            string UserID1 = AuthService.userMTRedSun.Id == null ? "" : AuthService.userMTRedSun.Id.ToString();
+            if (!string.IsNullOrEmpty(UserID1))
+            {
+                var dimension = await Service.GetDimensions();
+                Height = dimension.Height+78 - 393;
+                if (Height <= 200)
+                {
+                    Height = 200;
+                }
+                MaxHeight = Height.ToString() + "px"; HeightBody = dimension.Height - 63; MaxHeightBody = HeightBody.ToString() + "px"; 
+                curPage = 1;
+                pagerSize = 5;
+                pageSize = 50;
+                StateHasChanged();
+                isViewingSender = "None";
+                ReceiveCountryList = AuthService.userMTRedSun.ReceiveCountryList.ToList();
+                ReceiveCountryLists = ReceiveCountryList.FirstOrDefault();
+                model.ToCountry = ReceiveCountryLists.CountryCode.ToString();
+                model.ToCountrySearch = ReceiveCountryLists.CountryCode.ToString();
+                model.UserID = AuthService.userMTRedSun.Id.ToString();
+                SendStateList = AuthService.userMTRedSun.StateList.ToList();
+                IDTypeList = AuthService.userMTRedSun.IDTypeList.ToList();
+                SendCountryIssueList = AuthService.userMTRedSun.CountryList.ToList();
+                TypeofStatusList = AuthService.userMTRedSun.TypeofStatusList.ToList().Where(x => x.StatusID != "0").ToList();
+                TypeofStatuses = TypeofStatusList.FirstOrDefault();
+                StateHasChanged();
+                TypeofStatusAllList = AuthService.userMTRedSun.TypeofStatusList.ToList();
+                model.StatusID = "0";
+
+                TypeofUpdateList = AuthService.userMTRedSun.TypeofUpdateList.ToList();
+                modelEditCust.TypeofUpdate = TypeofUpdateList[0].TypeID;
+                Boolean.TryParse(AuthService.userMTRedSun.Warning.ToString(), out isViewNote);
+                if (isViewNote)
+                {
+                    if (AuthService.userMTRedSun.NoteList.ToList().Count > 0)
+                    {
+                        foreach (var item in AuthService.userMTRedSun.NoteList.ToList())
+                        {
+                            if (item.NCode == "EXPIRE")
+                            {
+                                ComplianceNote.NOIDUNG = (item.NName == null ? "" : item.NName);
+                                ComplianceNote.Comment = (item.Warning == null ? "" : item.Warning).Replace("[Legal business name]", AuthService.userMTRedSun.LegalName.ToString()).Replace("[expiration date]", AuthService.userMTRedSun.Expire.ToString());
+                                ComplianceNote.Comment2 = (item.Warning2 == null ? "" : item.Warning2).Replace("[Business owner name]", AuthService.userMTRedSun.OwnerName.ToString()).Replace("[expiration date]", AuthService.userMTRedSun.Expire.ToString());
+                                ComplianceNote.Comment3 = (item.Warning3 == null ? "" : item.Warning3);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    await DownloadFileFromStreamNew();
+                }
+                bool isSearch=false;
+                var Phone = sessionStorage.GetItem<string>("SPhone");
+                var Address = sessionStorage.GetItem<string>("SAddress");
+                var FullName = sessionStorage.GetItem<string>("SFullName");
+                var DriverID = sessionStorage.GetItem<string>("SDriverID");
+                var SSN = sessionStorage.GetItem<string>("SSSN");
+                var SSearch = sessionStorage.GetItem<string>("SSearch");
+                if((SSearch==null?"0":SSearch)=="1")
+                {
+                    if (!string.IsNullOrEmpty(Phone))
+                    {
+                        model.Phone = Phone;
+                        isSearch = true;
+                    }
+                    if (!string.IsNullOrEmpty(Address))
+                    {
+                        model.Address = Address;
+                        isSearch = true;
+                    }
+                    if (!string.IsNullOrEmpty(FullName))
+                    {
+                        model.FullName = FullName;
+                        isSearch = true;
+                    }
+                    if (!string.IsNullOrEmpty(DriverID))
+                    {
+                        model.DriverID = DriverID;
+                        isSearch = true;
+                    }
+                    if (!string.IsNullOrEmpty(SSN))
+                    {
+                        model.SSN = SSN;
+                        isSearch = true;
+                    }
+                    StateHasChanged();
+                    if (isSearch)
+                    {
+                        ViewReport();
+                    }
+                }
+                StateHasChanged();
+            }
+            else
+            {
+              await AuthService.Logout();
+            }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error silently or show toast
+            toastService.ShowError("Error initializing page: " + ex.Message);
+        }
+    }
+    public async Task<bool> Validate() 
+    {
+        bool result = true;
+        if (string.IsNullOrEmpty(model.Phone) && string.IsNullOrEmpty(model.Address)
+        && string.IsNullOrEmpty(model.FullName) && string.IsNullOrEmpty(model.SSN) && string.IsNullOrEmpty(model.DriverID))
+        {
+            result = false;
+            toastService.ShowWarning("Enter condition search");
+        }
+        StateHasChanged();
+
+        return result;
+    }
+    protected async void ChangeCountry(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        ToCountry = e.Value.ToString();
+
+        if(!ToCountry.Contains("Select One"))
+        {
+            NavigationManager.NavigateTo("/Transaction/NewTransaction?Custid=&BCustid=&fc=US&tc=" + ToCountry );
+        }
+        StateHasChanged();
+        //ChangeRecipient(e);
+        //StateHasChanged();
+        //var resp = await HttpService.Request("post", "/Customer/getHistoryRecipientCombo", payload);
+        //if (resp.Status.ToString() == "200")
+        //{
+        //    Table2 = resp.Content.RecipientComboList;
+        //    Console.WriteLine(Table2);
+        //    //RecipientComboList = resp.Content.HistoryRecipientCombo.ToList();
+        //    //RecipientComboLists = RecipientComboList.FirstOrDefault();
+        //    //BCustID = RecipientComboLists.B_CUST_ID.ToString();
+        //}
+    }
+    protected async void ChangeCountrySearch(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        ToCountry = e.Value.ToString();
+
+        if(!ToCountry.Contains("Select One") && !string.IsNullOrEmpty(CustID) )
+        {
+            NavigationManager.NavigateTo("/Transaction/NewTransaction?Custid=" + CustID + "&BCustid=&fc=US&tc=" + ToCountry);
+        }
+        StateHasChanged();
+
+    }
+    protected async void ChangeCustomer(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        ToCountrySelect = "";
+        CustID =  e.Value.ToString();
+        BCustID = "";
+        isViewbutton = false;
+        if(CustID.Contains("Select One"))
+        {
+            isNewRecipient=false;
+            isDisplayCountry = "None";
+        }
+        else
+        {
+            isNewRecipient = true;
+            isDisplayCountry = "initial";
+        }
+        dynamic payload = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "getHistoryRecipientCombo",
+            UserName=AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            CustID = CustID,
+            pageIndex = 1,
+            pageSize = 50
+        };
+        RecipientComboListResp RecipientComboListresp = await HttpService.Post<RecipientComboListResp>
+            ("/Customer/getHistoryRecipientCombo", payload);
+        Table2 = null;
+        if (RecipientComboListresp.Status == 200)
+        {
+            RecipientComboListList = RecipientComboListresp.Content.RecipientComboList;
+            RecipientComboLists = RecipientComboListList.FirstOrDefault();
+            BCustID = RecipientComboLists.B_CUST_ID.ToString();
+            //RecipientComboList = RecipientComboListresp.Content.RecipientComboList.ToArray();
+            //RecipientComboListList = RecipientComboListresp.Content.RecipientComboList.ToList();
+
+        }
+        else
+        {
+            if (RecipientComboListresp.Status == 99)
+            {
+                toastService.ShowWarning("User is not Exist or Expire");
+                await AuthService.Logout();
+            }
+        }
+        StateHasChanged();
+        //ChangeRecipient(e);
+        //StateHasChanged();
+        //var resp = await HttpService.Request("post", "/Customer/getHistoryRecipientCombo", payload);
+        //if (resp.Status.ToString() == "200")
+        //{
+        //    Table2 = resp.Content.RecipientComboList;
+        //    Console.WriteLine(Table2);
+        //    //RecipientComboList = resp.Content.HistoryRecipientCombo.ToList();
+        //    //RecipientComboLists = RecipientComboList.FirstOrDefault();
+        //    //BCustID = RecipientComboLists.B_CUST_ID.ToString();
+        //}
+    }
+    protected async void ChangeRecipient(ChangeEventArgs e)
+    {
+        StateHasChanged();
+        BCustID =e.Value.ToString();
+        ToCountrySelect = "";
+        dynamic payload = new
+        {
+            Form = "/Customer/SearchCustomer",
+            FormName = "Search Customer",
+            Action = "ChangeRecipient",
+            UserName=AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+            UserID = model.UserID,
+            BCustID =BCustID,
+            pageIndex = 1,
+            pageSize = 50
+        };
+        if (BCustID.Contains("Select One"))
+        {
+            isViewbutton = false;
+        }
+        else
+        {
+            B_CustomerProfileListResp Resp = await HttpService.Post<B_CustomerProfileListResp>
+              ("/Customer/RecipientProfile", payload);
+            if (Resp.Status == 200)
+            {
+                if(Resp.Content.RecipientProfile.Count>0)
+                {
+                    foreach (var item in Resp.Content.RecipientProfile)
+                    {
+                        ToCountrySelect = item.COUNTRY.ToString();
+                    }
+                }
+
+            }
+            else
+            {
+                if (Resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+            }
+
+            isViewbutton = true;
+            StateHasChanged();
+
+            //var resp = await HttpService.Request("post", "/Customer/getHistoryRecipientCombo", payload);
+            //if (resp.Status.ToString() == "200")
+            //{
+
+            //    Table = resp.Content.CustomerList;
+            //    Table1 = resp.Content.CustomerComboList;
+            //}
+            //else
+            //{
+            //    Table = null;
+            //    Table1 = null;
+            //}
+        }
+    }
+    protected async void EditCustomerReport()
+    {
+        isEditCustomer=false;
+        C_FULLNAME  = "white!important";
+        C_LASTNAME  = "white!important";
+        C_FIRSTNAME  = "white!important";
+        C_MIDDLENAME  = "white!important";
+        C_EMAIL  = "white!important";
+        C_ID_TYPE  = "white!important";
+        C_DRIVER_ID  = "white!important";
+        C_DRIVER_ID_BK  = "white!important";
+        C_PASSPORT_NO  = "white!important";
+        C_STATE_ISSUE  = "white!important";
+        C_EXPIRATION  = "white!important";
+        C_IssueDateBK  = "white!important";
+        C_DOB_BK  = "white!important";
+        C_SSN_BK  = "white!important";
+        C_ADDRESS  = "white!important";
+        C_CITY  = "white!important";
+        C_STATE  = "white!important";
+        C_ZIP_CODE  = "white!important";
+        C_PHONE1  = "white!important";
+        C_CountryIssue  = "white!important";
+        C_Occupation  = "white!important";
+        C_ReasonforUpdate  = "white!important";
+        C_ReasonforBlock  = "white!important";
+        C_Status  = "white!important";
+        C_Comment  = "white!important";
+        C_CompanyNote = "white!important";
+
+        StateHasChanged();
+    }
+    protected async void ViewReport()
+    {
+        try
+        {
+            if(await Validate())
+            {
+                curPage = 1;
+                pagerSize = 5;
+                startPage = 1;
+                endPage = 0;
+                isViewingReport = true;
+                StateHasChanged();
+
+                sessionStorage.SetItem("SPhone", (model.Phone==null?"":model.Phone));
+                sessionStorage.SetItem("SAddress", (model.Address==null?"":model.Address));
+                sessionStorage.SetItem("SFullName", (model.FullName == null ? "" : model.FullName));
+                sessionStorage.SetItem("SDriverID", (model.DriverID==null?"":model.DriverID));
+                sessionStorage.SetItem("SSSN", (model.SSN == null ? "" : model.SSN));
+                sessionStorage.SetItem("SSearch", "1");
+                await getData("/Customer/SearchCustomer", "Search Customer", "CustomerProfile");
+                await SetPageSize("forward");
+                await refreshNoidung();
+                if(viewSearch)
+                {
+                    toastService.ShowSuccess("Load data successful!");
+                }
+                else
+                {
+                    toastService.ShowWarning("Nothing to view!");
+                }
+
+                isViewingReport = false;
+                StateHasChanged();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError(ex.Message);
+        }
+
+        isViewingReport = false;
+        StateHasChanged();
+    }
+    protected async void SelectTransaction()
+    {
+        try
+        {
+            StateHasChanged();
+
+
+            if (!string.IsNullOrEmpty(ToCountrySelect))
+            {
+                NavigationManager.NavigateTo("/Transaction/NewTransaction?Custid=" +CustID + "&BCustid=" +BCustID + "&fc=US&tc=" +ToCountrySelect);
+            }
+            StateHasChanged();
+
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError(ex.Message);
+        }
+
+
+        StateHasChanged();
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+     {
+    //     if (firstRender)
+    //     {
+    //         await JS.InvokeVoidAsync("runScript");
+    //     }
+    }
+    public async Task NotConfirmDeleteFile()
+    {
+        IsViewDelete = false;
+        this.StateHasChanged();
+    }
+    public async Task ConfirmDeleteFile()
+    {
+        try
+        {
+
+            dynamic payload = new
+            {
+                Form = "/Customer/SearchCustomer",
+                FormName = "Search Customer",
+                Action = "ConfirmDeleteFile",
+                UserName=AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                CustID = modelEditCust.CUST_ID,
+                ID = idDel
+            };
+
+            StateHasChanged();
+            var resp = await HttpService.Request("post", "/Customer/DeleteProfileFile", payload);                  
+            if (resp.Status.ToString() == "200")
+            {
+                loadedFiles.Clear();
+
+                getCutomerFile();
+            }
+            else
+            {
+                toastService.ShowWarning(resp.Message.ToString());
+            }
+
+        }           
+        catch (Exception ex)
+        {
+            error = ex.Message; 
+            toastService.ShowError(ex.Message);
+        }
+        IsViewDelete = false;
+        this.StateHasChanged();
+    }
+    public async Task DeleteFile(Int64 id)
+    {
+       
+            idDel = id;
+            IsViewDelete = true;
+          
+    }
+    public async Task DownloadFileFromStream(string FileName,Int64 No)
+    {
+        try
+        {
+            dynamic payload = new
+            {
+                Form = "/Customer/SearchCustomer",
+                FormName = "Search Customer",
+                Action = "DownloadFileFromStream",
+                UserName=AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString(),
+                UserID = model.UserID,
+                CustID = modelEditCust.CUST_ID,
+                ID = No
+            };
+           
+            CustomerProfileFileResp respdoc = await HttpService.Post<CustomerProfileFileResp>
+            ("/Customer/CustomerProfileFileID", payload);
+            if (respdoc.Status.ToString() == "200")
+            {
+                SenderDocumentsListDownload = respdoc.Content;                   
+            }
+            else
+            {
+                toastService.ShowWarning(respdoc.Message.ToString());
+                SenderDocumentsListDownload = new List<CustomerProfileFile>();
+            }
+            if(SenderDocumentsListDownload.Count>0)
+            {                    
+                foreach(var item in SenderDocumentsListDownload)
+                {                       
+                        var fileStream = GetFileStream(item.FileLoad);   
+                    using var streamRef = new DotNetStreamReference(stream: fileStream);
+                    await JS.InvokeVoidAsync("downloadFileFromStream", FileName, streamRef);
+                }                   
+            }
+            else
+            {
+                toastService.ShowWarning("Nothing to download");
+            }
+            
+        }           
+        catch (Exception ex)
+        {
+            error = ex.Message; 
+            toastService.ShowError(ex.Message);
+        }
+    }
+    //public async Task DownloadFileFromStream(string FileName,byte[]? FileLoad)
+    //{
+    //    try
+    //    {
+    //        var fileStream = GetFileStream(FileLoad);   
+    //        using var streamRef = new DotNetStreamReference(stream: fileStream);
+    //        await JS.InvokeVoidAsync("downloadFileFromStream", FileName, streamRef);
+    //    }           
+    //    catch (Exception ex)
+    //    {
+    //        error = ex.Message; 
+    //        toastService.ShowError(ex.Message);
+    //    }
+    //}
+    public Stream GetFileStream(byte[]? FileLoad)
+    {       
+        try
+        {
+            var fileStream = new MemoryStream(FileLoad);
+            return fileStream;
+        }
+        catch (Exception ex)
+        {
+            return null;
+            error = ex.Message;
+            toastService.ShowError(ex.Message);
+        }
+    }
+}
+
+

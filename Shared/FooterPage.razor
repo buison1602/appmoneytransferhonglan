@@ -1,0 +1,55 @@
+﻿@inject BrowserService Service
+@inject IAuthService AuthService;
+<footer class="content-footer footer bg-footer-theme" style="height:20px!important">
+    <div class="container-fluid"
+         style="padding-top: 1px!important;padding-bottom: 1px!important;">
+         <div class="row g-1">
+                                <div class="col-md-4" style="text-align:left" >
+                <a href="https://www.honglanservices.us" target="_blank" class="btn btn-link" style="font-size: 12px !important;font-weight: 700!important;height:18px!important">Copyright Red Sun MT Software</a>
+                                </div>
+            <div class="col-md-4" style="text-align:center;color:#66665d;height:18px!important ">
+                <div style="float: left; width: 19%; padding-left: 0px!important; text-align: center!important;background:#ffa500;font-size: 12px !important;font-weight: 700!important">
+                    Ofac
+                </div>
+                <div style="float: left; width: 19%; padding-left: 0px!important; text-align: center!important;background:#d3d3d3;font-size: 12px !important;font-weight: 700!important">
+                    Cancel
+                </div>
+                <div style="float: left; width: 19%; padding-left: 0px!important; text-align: center!important;background:#808080;font-size: 12px !important;font-weight: 700!important">
+                    Refund
+                </div>
+                <div style="float: left; width: 19%; padding-left: 0px!important; text-align: center!important;background:#bdb76b;font-size: 12px !important;font-weight: 700!important">
+                    Void
+                </div>
+                <div style="float: left; width: 19%; padding-left: 0px!important; text-align: center!important;background:#add8e6;font-size: 12px !important;font-weight: 700!important">
+                    Agg
+                </div>
+            </div>
+            <div class="col-md-4" style="text-align:right;color:#66665d!important;font-size: 12px !important;font-weight: 700!important;height:18px!important">
+                Ip Address: @IpAddress
+            </div>
+                                </div>        
+    </div>
+</footer>
+@inject IJSRuntime JS;
+@inject IHttpService HttpService;
+@code
+{
+    public string?  IpAddress;
+    protected override async Task OnInitializedAsync()
+    {
+        var respIp = await HttpService.Request("post", "/api/getCheckIP", "");
+        if (respIp.Status.ToString() == "200")
+        {
+            IpAddress = respIp.Content.ToString();
+        }
+        StateHasChanged();
+    }
+    public async Task<string> GetIpAddress()
+    {
+        var remoteIpAddress = JS.InvokeAsync<object>("GetAddress");
+        if (remoteIpAddress != null)
+            return remoteIpAddress.ToString();
+        return string.Empty;
+    }
+}
+

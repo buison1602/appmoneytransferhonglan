@@ -1,0 +1,62 @@
+﻿@inject IJSRuntime jsRuntime
+
+@attribute [Authorize]
+
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+<section id="sidebar">
+    <div class="sidebar-body">
+        <nav class="dxbs-tree" id="navTreeView">
+            <ul class="nav nav-pills nav-stacked">
+                <li class="active-parent">
+                    <a target="_top">
+                        <span class="expand-btn glyphicon glyphicon-minus"></span>
+                        <span>For Admin</span>
+                    </a>
+                    <ul class="nav nav-pills nav-stacked">
+                        <li class="active">
+                            <NavLink class="nav-link" href="/GeneralDailyReportVP" @onclick="ClickItemNav">
+                                <span>Report</span>
+                            </NavLink>
+                        </li>
+                    </ul>
+                </li>
+
+                <li>
+                    <a>
+                        <span class="expand-btn glyphicon glyphicon-minus"></span>
+                        <span>For Employee</span>
+                    </a>
+                    <ul class="nav nav-pills nav-stacked">
+                        <li class="active">
+                            <NavLink class="nav-link" href="/CheckImage" @onclick="ClickItemNav">
+                                <span>Kiểm tra h&#236;nh</span>
+                            </NavLink>
+                        </li>
+
+
+                        <li>
+                            <a href="/#">
+                                <span>X&#225;c Minh Nh&#226;n Vi&#234;n</span>
+                            </a>
+                        </li>
+                        <li><a href="/#"><span>B&#225;o C&#225;o Tổng Hợp</span></a></li>
+                        <li><a href="/#"><span>T&#236;nh trạng hồ sơ</span></a></li>
+                        <li><a href="/#"><span>X&#225;c Minh C&#244;ng Ty</span></a></li>
+                        <li><a href="/#"><span>Kh&#225;ch H&#224;ng Th&#226;n Thiết</span></a></li>
+                        <li>
+                            <a href="/#"><span>Import Hồ Sơ</span></a>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+
+        </nav>
+    </div>
+
+</section>
+
+@code { private void ClickItemNav()
+            {
+                jsRuntime.InvokeVoidAsync("collapseNav");
+            } }

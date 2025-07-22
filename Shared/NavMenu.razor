@@ -1,0 +1,126 @@
+﻿@inject BrowserService Service
+@inject IAuthService AuthService;
+<div Style="max-height:@MaxHeight!important;height:@MaxHeight!important;min-height:@MaxHeight!important">
+    <MudNavMenu Style="background-color: white !important">
+        <MudText Typo="Typo.h6" Class="px-2" Style="color:#c1902a !important">MENU</MudText>
+    @*<MudText Typo="Typo.body2" Class="px-4 mud-text-secondary">Icons</MudText>*@
+    <MudDivider Class="my-0" />
+
+    @if (AuthService.userMTRedSun?.MenuParentList != null)
+    {
+        @foreach (var itemparent in AuthService.userMTRedSun.MenuParentList.ToList())
+        {
+            List<MenuChildList> MenuChildLists = AuthService.userMTRedSun.MenuChildList?.Where(x => x.MenuNameParent == itemparent.MenuNameParent).OrderBy(x => x.STT).ToList() ?? new List<MenuChildList>();
+
+                <MudNavGroup Title="@itemparent.MenuNameParent" Icon="@itemparent.Icon" Expanded="@itemparent.GroupP" Style="color:#c1902a !important">
+                @foreach (var item in MenuChildLists)
+                {
+                        @if (item.MenuNameChild != "AML Training")
+                        {
+                            <MudNavLink Href="@item.LinkPageColor" Icon="@item.Icon">@item.MenuNameChild</MudNavLink>
+                        }
+                        else
+                        {
+                            List<MenuChildList> MenuChildChildLists = AuthService.userMTRedSun.MenuChildChildList?.Where(x => x.MenuNameParent == item.MenuNameChild).OrderBy(x => x.STT).ToList() ?? new List<MenuChildList>();
+                            <MudNavGroup Title="@item.MenuNameChild" Icon="@item.Icon" Expanded=true>
+                                @if (MenuChildChildLists.Count>0)
+                                {
+                                    @foreach (var items in MenuChildChildLists)
+                                    {
+                                        <MudNavLink Href="@items.LinkPageColor" Icon="@item.Icon">@items.MenuNameChild</MudNavLink>
+                                    }
+                                }
+
+                            </MudNavGroup>
+                        }
+
+
+                }
+            </MudNavGroup>
+        }
+    }
+    else
+    {
+        <MudText Typo="Typo.body2" Class="px-2" Style="color:#999 !important">Loading menu...</MudText>
+    }
+</MudNavMenu>
+  @*   <MudDivider Class="my-2" />
+    <MudText Typo="Typo.h6" Class="px-4" Style="font-size: small!important">@Copyright</MudText> *@
+</div>
+
+@*<div class="row">
+    Copyright Red Sun MT Software
+  
+</div>
+<div class="row">
+    Ip Address: @IpAddress
+</div>
+<div class="row">
+    <span style="background:#fd7e14;width:19%!important">OFAC</span>
+    <span style="background:#fdac41;width:19%!important">CANCEL</span>
+    <span style="background:#20c997;width:19%!important">REFUND</span>
+    <span style="background:#00cfdd;width:19%!important">VOID</span>
+    <span style="background:#eeeee4;width:19%!important">AGG</span>
+</div>*@
+@inject IJSRuntime JS;
+@inject IHttpService HttpService;
+@code
+{
+    public int Height { get; set; }
+    public String MaxHeight { get; set; } = "500px";
+    public string?  IpAddress;
+    public string?  Copyright = "Copyright Red Sun MTS 2005 - " + DateTime.UtcNow.AddHours(-7).Year;
+    public int getHeight { get; set; }
+    public int getWidth { get; set; }
+    public async Task<string> GetIpAddress()
+    {
+
+        var remoteIpAddress = JS.InvokeAsync<object>("GetAddress");
+        if (remoteIpAddress != null)
+            return remoteIpAddress.ToString();
+        return string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var dimension = await Service.GetDimensions();
+        Height = dimension.Height - 200;
+        if (Height <= 500)
+        {
+            Height = 500;
+        }
+        MaxHeight = Height.ToString() + "px";
+        getHeight = dimension.Height;
+        getWidth = dimension.Width;
+        Copyright = "Copyright Red Sun MTS 2005 - " + DateTime.UtcNow.AddHours(-7).Year + " W: " + getWidth + " H: " + getHeight;
+        var respIp = await HttpService.Request("post", "/api/getCheckIP", "");
+        if (respIp.Status.ToString() == "200")
+        {
+            IpAddress = respIp.Content.ToString();
+        }
+        StateHasChanged();
+        // await JS.InvokeVoidAsync("runScript");
+    }
+    // protected override async void OnAfterRender(bool firstRender)
+    //{
+    //    if (firstRender)
+    //    {
+    //        await JS.InvokeVoidAsync("runScript");
+    //    }
+    //}
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("runScript");
+        }
+    }
+    //protected override Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    JS.InvokeVoidAsync("runScript");
+    //    return base.OnAfterRenderAsync(firstRender);
+    //}
+
+
+}
+

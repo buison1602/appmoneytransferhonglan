@@ -1,0 +1,395 @@
+﻿@page "/auth/login";
+<PageTitle>Login</PageTitle>
+@using Blazored.Toast.Configuration
+@inject  Blazored.Toast.Services.IToastService toastService;
+@inject NavigationManager NavigationManager;
+@using Blazored.Toast.Configuration;
+@inject IJSRuntime JS;
+@inject IHttpService HttpService;
+@inject ISyncSessionStorageService sessionStorage
+@* @using Microsoft.AspNetCore.Components.Web.Extensions.Head
+ *@
+<BlazoredToasts Position="Blazored.Toast.Configuration.ToastPosition.BottomRight"
+                Timeout="2"
+                IconType="IconType.FontAwesome"
+                ShowProgressBar="true"
+                SuccessClass="success-toast-override"
+                ErrorIcon="fa fa-bug"
+                SuccessIcon="fa fa-thumbs-up" />
+
+<PageTitle>Login - Red Sun Money Transfer</PageTitle>
+<div class="account-pages pt-2 pt-sm-5 pb-4 pb-sm-5">
+        <div class="container">
+
+        <div class="row justify-content-center" style="padding-top:100px!important">
+                @* <div class="col-xxl-4 col-lg-4" style="background-repeat: no-repeat; background-image: url(assets/img/thuonghieu.png)">*@
+                <div class="col-xxl-4 col-lg-4" >
+                <div class="card2">
+
+                    <div class="card-header pt-4 pb-4 text-center bg-primary" style="background: #c1902a!important;">
+                            <a href="auth/login">
+                                <span><img src="/assets/img/logo.png" alt="" height="70"></span>
+                            </a>
+                        </div>
+
+                        <div class="card2 p-4" style="padding-top:20px!important">
+
+                            <div class="text-center w-75 m-auto">
+                               @*  <h4 class="text-dark-50 text-center pb-0 fw-bold">Sign In</h4> *@
+                                @*<p class="text-muted mb-4">Enter your email address and password to access admin panel.</p>*@
+                            </div>
+                              <section class="ss-panel-new2">
+                            <span class="ss-header-new2">Sign In</span>
+                            <EditForm Model="@model" OnValidSubmit="OnValidSubmit" style="padding-top:25px!important; padding-left: 15px; padding-right: 15px;" autocomplete="on">
+
+                                <div class="mb-4">
+                                    <div class="did-floating-label-content">
+                                        <input type="text" class="did-floating-input" id="AgentName" name="AgentName" @bind="@model.AgentName" placeholder=" " autocomplete="on">
+                                        <label class="did-floating-label">Agent Name</label>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="did-floating-label-content">
+                                        <input type="text" class="did-floating-input" id="AgentID" name="AgentID" @bind="@model.AgentID" placeholder=" " autocomplete="on">
+                                        <label class="did-floating-label">Agent ID</label>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="did-floating-label-content">
+                                        <input type="text" class="did-floating-input" id="Username" name="Username" @bind="@model.Username" placeholder=" " autocomplete="on">
+                                        <label class="did-floating-label">User Name</label>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <div class="did-floating-label-content">
+                                        <input type="@(PasswordInput == InputType.Password ? "password" : "text")" class="did-floating-input password-input" id="Password" name="Password" @bind="@model.Password" placeholder=" " autocomplete="new-password">
+                                        <label class="did-floating-label">Password</label>
+                                        <button type="button" class="password-toggle-btn" @onclick="ButtonTestclick" aria-label="Toggle password visibility">
+                                            <i class="@(PasswordInput == InputType.Password ? "fa fa-eye" : "fa fa-eye-slash")"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                              
+                            <div class="mb-3 mb-0 text-center" style="padding-top: 20px!important">
+                                    <button disabled="@loading" class="btn btn-primary login-btn" type="submit">
+                                        @if (loading)
+                                        {
+                                            <span class="spinner-border spinner-border-sm mr-1"></span>
+                                        }
+                                        Log In
+                                    </button>
+                                </div>
+                             
+                              
+                            </EditForm>
+                            </section>
+
+                        <div class="mb-3 mb-0 text-center" style="padding-top: 25px!important">
+                                Copyright
+                            <a href="http://www.honglanservices.us/" target="_blank" class="btn btn-link" style="font-size:14px!important">Red Sun MT Software</a>
+                            </div>
+                            <div class="mb-3 mb-0 text-center">
+                                Ip Address: @IpAddress
+                            </div>
+                        </div> <!-- end card-body -->
+                    </div>
+                    <!-- end card -->
+                    <!--<div class="row mt-3">
+                        <div class="col-12 text-center">
+                            <p class="text-muted">Don't have an account? <a href="pages-register.html" class="text-muted ms-1"><b>Sign Up</b></a></p>
+                        </div>-->
+                    <!-- end col -->
+                    <!--</div>-->
+                    <!-- end row -->
+
+                </div> <!-- end col -->
+            </div>
+            <!-- end row -->
+        </div>
+        <!-- end container -->
+    </div>
+    <!-- end page -->
+
+   
+   
+    @*@inject IToastService toastService*@
+    @inject IAuthService AuthService;
+        @inject NavigationManager NavigationManager;
+@code {
+    private AppMoneyTransferRS.Models.Login model = new AppMoneyTransferRS.Models.Login();
+    private bool loading;
+    private string IpAddress = "";
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void ButtonTestclick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+    public async Task<string> GetIpAddress()
+    {
+        try
+        {
+            var remoteIpAddress = await JS.InvokeAsync<object>("GetAddress");
+            if (remoteIpAddress != null)
+                return remoteIpAddress.ToString();
+            return"";
+        }
+        catch(Exception ex)
+        {
+            return "";
+        }
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Initialize session storage items first
+            sessionStorage.SetItem("SSearchOnline", "0");
+            sessionStorage.SetItem("SSearch", "0");
+            sessionStorage.SetItem("RSearch", "0");
+            sessionStorage.SetItem("AgentIDN", "");
+
+            // Clear authentication state without navigation
+            await AuthService.Reset();
+
+            // Get IP address
+            var respIp = await HttpService.Request("post", "/api/getCheckIP", "");
+            if(respIp.Status.ToString()=="200")
+            {
+                IpAddress = respIp.Content.ToString();
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+    }
+    public async Task KeyPressHandler(KeyboardEventArgs e)
+    {
+        if (e.Key.ToLowerInvariant() == "enter")
+        {
+            OnValidSubmit();
+        }
+    }
+
+    private async Task OnValidSubmit()
+    {
+        loading = true;
+        StateHasChanged();
+
+        try
+        {
+            string messageError = "";
+            bool error = false;
+
+            // Validate input fields
+            if (string.IsNullOrEmpty(model.AgentID))
+            {
+                error = true;
+                messageError += "Enter Agent ID !";
+            }
+            if (string.IsNullOrEmpty(model.AgentName))
+            {
+                error = true;
+                messageError += Environment.NewLine + "Enter Agent Name !";
+            }
+            if (string.IsNullOrEmpty(model.Username))
+            {
+                error = true;
+                messageError += "Enter User Name !";
+            }
+            if (string.IsNullOrEmpty(model.Password))
+            {
+                error = true;
+                messageError += "Enter Password !";
+            }
+
+            if (error)
+            {
+                loading = false;
+                StateHasChanged();
+                toastService.ShowWarning(messageError);
+                return;
+            }
+
+            // Attempt login
+            ResponseResp responseResp = await AuthService.Login(model);
+
+            if (responseResp.Status == 200)
+            {
+                // Login successful - navigate based on user type
+                string targetUrl = "/Customer/SearchCustomer";
+
+                if (AuthService.userMTRedSun?.AgentType?.ToString() == "3")
+                {
+                    targetUrl = "/DeliveryTransaction/DeliveryStatus";
+                }
+
+                // Navigate immediately after successful login
+                NavigationManager.NavigateTo(targetUrl, forceLoad: true);
+                return; // Exit method to prevent further execution
+            }
+            else
+            {
+                // Login failed
+                loading = false;
+                StateHasChanged();
+                toastService.ShowWarning(responseResp.Message);
+            }
+        }
+        catch (Exception ex)
+        {
+            loading = false;
+            StateHasChanged();
+            toastService.ShowError(ex.Message);
+            Console.WriteLine(ex.Message);
+        }
+    }
+}
+
+<style>
+    /* Enhanced floating label styles for login page */
+    .did-floating-label-content {
+        position: relative;
+        margin-bottom: 8px;
+    }
+
+    .did-floating-input {
+        font-size: 16px !important;
+        display: block;
+        width: 100%;
+        height: 42px !important;
+        padding: 12px 12px 8px 12px !important;
+        background: #fff;
+        color: #323840;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        box-sizing: border-box;
+        transition: border-color 0.2s ease;
+    }
+
+    .did-floating-input:focus {
+        outline: none;
+        border-color: #166178 !important;
+        box-shadow: 0 0 0 3px rgba(22, 97, 120, 0.1);
+    }
+
+    .did-floating-label {
+        color: #666 !important;
+        font-size: 14px;
+        font-weight: normal;
+        position: absolute;
+        pointer-events: none;
+        left: 12px;
+        top: 12px;
+        padding: 0 4px;
+        background: #fff;
+        transition: all 0.2s ease;
+        z-index: 1;
+    }
+
+    .did-floating-input:focus ~ .did-floating-label,
+    .did-floating-input:not(:placeholder-shown) ~ .did-floating-label {
+        top: -8px;
+        left: 8px;
+        font-size: 12px;
+        color: #166178 !important;
+        font-weight: 500;
+    }
+
+    /* Password field with toggle button */
+    .password-input {
+        padding-right: 45px !important;
+    }
+
+    .password-toggle-btn {
+        position: absolute;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        background: none;
+        border: none;
+        color: #666;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 4px;
+        transition: color 0.2s ease;
+        z-index: 2;
+    }
+
+    .password-toggle-btn:hover {
+        color: #166178;
+        background-color: rgba(22, 97, 120, 0.1);
+    }
+
+    .password-toggle-btn:focus {
+        outline: 2px solid #166178;
+        outline-offset: 2px;
+    }
+
+    /* Login button styling */
+    .login-btn {
+        width: 200px !important;
+        height: 44px;
+        font-size: 16px;
+        font-weight: 600;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+
+    .login-btn:hover:not(:disabled) {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(27, 110, 194, 0.3);
+    }
+
+    /* Panel header spacing fix */
+    .ss-panel-new2 .ss-header-new2 {
+        margin-top: -15px !important;
+        margin-bottom: 5px;
+    }
+
+    /* Responsive adjustments */
+    @@media (max-width: 576px) {
+        .card2 {
+            margin: 0 15px;
+        }
+
+        .login-btn {
+            width: 100% !important;
+            max-width: 280px;
+        }
+
+        .did-floating-input {
+            font-size: 16px !important; /* Prevents zoom on iOS */
+        }
+    }
+
+    /* Improved focus states for accessibility */
+    .did-floating-input:focus {
+        border-color: #166178 !important;
+        box-shadow: 0 0 0 3px rgba(22, 97, 120, 0.15);
+    }
+
+    /* Error state styling */
+    .did-floating-input.error {
+        border-color: #dc3545 !important;
+    }
+
+    .did-floating-input.error ~ .did-floating-label {
+        color: #dc3545 !important;
+    }
+</style>

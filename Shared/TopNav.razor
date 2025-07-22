@@ -1,0 +1,1178 @@
+﻿<!-- Topbar Start -->
+@attribute [Authorize]
+
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+@inject Blazored.Toast.Services.IToastService toastService;
+@inject IJSRuntime JS;
+@using System.Text.RegularExpressions;
+@inject BrowserService Service;
+
+<div class="container-fluid" style="padding-left: 0px!important;padding-right: 15px!important;color: white!important;font-size: large!important;height:50px!important;background: #166178 !important;width:100%!important">
+    <div class="navbar-nav flex-row ms-auto" id="navbar-collapse">       
+            <div class="navbar-nav hide-mobile" style="text-align:left!important;padding-top:0px!important;padding-left:30px!important">
+            <div class="nav-item navbar-search-wrapper hide-mobile">
+                    <div class="d-flex flex-column">
+                        @foreach (var item in TranList)
+                    {
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px !important;height:16px!important;font-size:12px!important">User Name:  @AuthService.userMTRedSun.FullName</small>
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px !important;height:16px!important;font-size:12px!important ">Agent Name: @AuthService.userMTRedSun.AgentName</small>
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px !important;height:16px!important;font-size:12px!important "> Date Time:  @datetime</small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="navbar-nav flex-row ms-auto hide-mobile" id="navbar-collapse" style="padding-top:0px!important;">
+            <div class="nav-item navbar-search-wrapper hide-mobile">
+                <div class="d-flex flex-column">
+                    @foreach (var item in TranList)
+                    {
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px!important;height:16px!important;font-size:12px!important">Available Credit:  @item.AvailableCredit</small>
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px!important;height:16px!important;font-size:12px!important">
+                            <div style="float:left;width:80%;">
+                                Transaction Count:  @item.NOOFTRANS
+                            </div> 
+                            <div style="float:left;width:20%;">
+                                <button type="button" class="btn btn-link"
+                                style="padding-left:5px!important; padding-top: 0px!important;text-align:left!important"
+                                @onclick="() => getranReList()">
+                                    @if (isrefresh)
+                                    {
+                                        <span class="spinner-border spinner-border-sm mr-1" style="font-size: small;color:white!important"></span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fa fa-refresh" aria-hidden="true" style="font-size: small;color:white!important"></i>
+                                    }
+                                </button>
+                            </div>
+
+
+
+                        </small>
+                        <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 10px !important;height:16px!important;font-size:12px!important ">
+                            Total Amount:  @item.TOTALAMOUNT
+
+                        </small>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="navbar-nav flex-row ms-auto hide-mobile" id="navbar-collapse" style="padding-top:0px!important;">
+            <div class="navbar-nav flex-row ms-auto hide-mobile" id="navbar-collapse" style="padding-top:0px!important;">
+                <div class="nav-item navbar-search-wrapper hide-mobile">
+                    <div class="d-flex flex-column">
+                        <small class="emp_name text-truncate" style=" text-align: left !important; padding-right: 10px !important;height:16px!important;font-size:12px!important ">
+                            @ExchangeRate
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="navbar-nav flex-row ms-auto hide-mobile" id="navbar-collapse" style="padding-top:0px!important;">
+                <div class="nav-item navbar-search-wrapper hide-mobile">
+                    <div class="d-flex flex-column">
+                        @foreach (var item in ExchangeRateList)
+                        {
+                            <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 50px !important;height:16px!important;font-size:12px!important">  @item.Currency</small>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="navbar-nav flex-row ms-auto hide-mobile" id="navbar-collapse" style="padding-top:0px!important;">
+                <div class="nav-item navbar-search-wrapper hide-mobile">
+                    <div class="d-flex flex-column">
+                        @foreach (var item in ExchangeRateList1)
+                        {
+                            <small class="emp_post text-truncate" style=" text-align: left !important; padding-right: 50px !important;height:16px!important;font-size:12px!important">  @item.Currency</small>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+        <nav class="navbar-nav flex-row ms-auto" style="padding-top:0px!important">
+            <MudNavLink Href=@LinkSearch style="padding-top:7px!important;padding-right:10px!important"><span class="emp_name text-truncate hide-mobile" style="color:white!important">@SearchSender </span></MudNavLink>
+
+            <li class="nav-item navbar-dropdown dropdown-user dropdown">
+                <a class="nav-link dropdown-toggle hide-arrow" data-bs-toggle="dropdown">
+                    <div class="avatar avatar-online">
+                        <img src="data:image/png;base64,@FileImage" alt class="rounded-circle" />
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <a class="dropdown-item" href="/Customer/SearchCustomer">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 me-3" style="padding-top:10px!important">
+                                    <div class="avatar avatar-online">
+                                        <img src="data:image/png;base64,@FileImage" alt class="rounded-circle" style="height:45px!important" />
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column">
+                                    <span class="emp_name text-truncate" style="text-align:center!important;height:16px!important;font-size:12px!important"> @FullName</span>
+                                    <small class="emp_post text-truncate text-muted" style="text-align:center!important;height:16px!important;font-size:12px!important">@AgentName</small>
+                                    <small class="emp_post text-truncate text-muted" style="text-align:center!important;height:16px!important;font-size:12px!important">@Group</small>
+                                </div>
+
+                                @*<div class="flex-grow-1">
+                                <span class="fw-semibold d-block lh-1">@FullName</span>
+                                <small>@AgentName</small>
+                                <small>@Group</small>
+                                </div>*@
+                            </div>
+                        </a>
+                    </li>
+                    <li>
+                        <div class="dropdown-divider"></div>
+                    </li>
+                    <li>
+                        <a id="btn-profile" @onclick="ViewProfile" class="dropdown-item">
+                            <i class="bx bx-user me-2"></i>
+                            <span class="align-middle">My Profile</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a id="btn-profile" class="dropdown-item" @onclick="ChangePassword">
+                            <i class="bx bx-user me-2"></i>
+                            <span class="align-middle">Change Password</span>
+                        </a>
+                    </li>
+                    @*<li>
+                    <a class="dropdown-item" href="pages-account-settings-account.html">
+                    <i class="bx bx-cog me-2"></i>
+                    <span class="align-middle">Settings</span>
+                    </a>
+                    </li>*@
+
+                    @*<li>
+                    <a class="dropdown-item" href="pages-account-settings-billing.html">
+                    <span class="d-flex align-items-center align-middle">
+                    <i class="flex-shrink-0 bx bx-credit-card me-2"></i>
+                    <span class="flex-grow-1 align-middle">Billing</span>
+                    <span class="flex-shrink-0 badge badge-center rounded-pill bg-danger w-px-20 h-px-20">4</span>
+                    </span>
+                    </a>
+                    </li>*@
+                    <li>
+                        <div class="dropdown-divider"></div>
+                    </li>
+                    @*<li>
+                    <a class="dropdown-item" href="pages-help-center-landing.html">
+                    <i class="bx bx-support me-2"></i>
+                    <span class="align-middle">Help</span>
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="pages-faq.html">
+                    <i class="bx bx-help-circle me-2"></i>
+                    <span class="align-middle">FAQ</span>
+                    </a>
+                    </li>
+                    <li>
+                    <a class="dropdown-item" href="pages-pricing.html">
+                    <i class="bx bx-dollar me-2"></i>
+                    <span class="align-middle">Pricing</span>
+                    </a>
+                    </li>
+                    <li>
+                    <div class="dropdown-divider"></div>
+                    </li>*@
+                    <li>
+                        <a href="javascript:void(0);" @onclick="Logout" class="dropdown-item notify-item">
+                            <i class="mdi mdi-logout me-1"></i>
+                            <span>Logout</span>
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </nav>
+        <!--/ User -->
+        @*  </ul> *@
+    </div>
+
+    @if (isLoadProfile)
+    {
+        <div class="modal fade show" id="editModalHistory" tabindex="-1" style="display:flex;padding-top:3rem!important" aria-modal="true" role="dialog">
+            <div class="modal-dialog" role="document" style="max-width:500px!important">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">View Profile</h5>
+
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseProfile">
+                            <span aria-hidden="true" style="font-size: xx-large;">&times;</span>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-body">
+                                    <div class="user-avatar-section">
+                                        <div class=" d-flex align-items-center flex-column">
+                                            <img src="data:image/png;base64,@FileImage" class="img-fluid rounded my-4" height="110" width="110" alt="@FullName" />
+                                            @* <img class="img-fluid rounded my-4" src="../../assets/img/avatars/10.png" height="110" width="110" alt="User avatar">*@
+                                            <div class="user-info text-center">
+                                                <h5 class="mb-2">@FullName</h5>
+                                                <span class="badge bg-label-secondary">@Group</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h5 class="pb-2 border-bottom mb-4">Details</h5>
+                                    <div class="info-container">
+                                        <ul class="list-unstyled" style="color: black!important">
+                                            <li class="mb-3">
+                                                <span class="user-info">Username:</span>
+                                                <span>@AuthService.userMTRedSun.UserName</span>
+                                            </li>
+                                            <li class="mb-3">
+                                                <span class="user-info">Full Name:</span>
+                                                <span>@AuthService.userMTRedSun.FullName</span>
+                                            </li>
+                                            @* <li class="mb-3">
+                                        <span class="fw-bold me-2">Email:</span>
+                                        <span>vafgot@vultukir.org</span>
+                                        </li>*@
+                                            <li class="mb-3">
+                                                <span class="user-info">Status:</span>
+                                                <span class="badge bg-label-success">Active</span>
+                                            </li>
+                                            <li class="mb-3">
+                                                <span class="user-info">Role:</span>
+                                                <span>@Group</span>
+                                            </li>
+                                            @if (isEditProfile)
+                                            {
+                                                <div class="col-12">
+                                                    <div class="card">
+                                                        <div class="card-body" style="padding:16px 5px 5px 5px!important">
+                                                            <section class="ss-panel">
+                                                                <span class="ss-header user-info">Edit Profile</span>
+                                                                <div class="row">
+                                                                    <div class="col-md-6" style="padding-top:7px!important">
+                                                                        <div class="did-floating-label-content">
+                                                                            <input type="text" class="did-floating-input" id="floatingInput" @bind="@model.FirstName" placeholder="  " @ref="@E_FirstName" style="background-color:@C_FirstName">
+                                                                            <label class="did-floating-label">First Name</label>
+                                                                        </div>
+                                                                    </div>
+
+
+                                                                    <div class="col-md-6" style="padding-top:7px!important">
+                                                                        <div class="did-floating-label-content">
+                                                                            <input type="text" class="did-floating-input" id="floatingInput" @bind="@model.LastName" placeholder="  " @ref="@E_LastName" style="background-color:@C_LastName">
+                                                                            <label class="did-floating-label">Last Name</label>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="row">
+
+                                                                    <div class="col-md-12" style="padding-top:10px!important">
+                                                                        <InputFile OnChange="@LoadFiles" accept=".jpg,.gif,.png,.JPEG" />
+                                                                    </div>
+
+                                                                </div>
+                                                            </section>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                        </ul>
+                                        <div class="d-flex justify-content-center pt-3">
+                                            <div class="row">
+                                                <div class="col-md-4" style="padding-top:8px!important">
+                                                    <button type="button" class="btn btn-primary" style="width:100px!important" @onclick="Editprofile">
+                                                        Edit
+                                                    </button>
+                                                </div>
+                                                <div class="col-md-4" style="padding-top:8px!important">
+                                                    <button type="button" class="btn btn-primary" style="width:100px!important" @onclick="UploadFile">
+                                                        Update
+                                                    </button>
+                                                </div>
+                                                <div class="col-md-4" style="padding-top:8px!important">
+                                                    <button type="button" class="btn btn-primary" @onclick="CloseProfile" style="width: 100px !important">
+                                                        Exit
+                                                    </button>
+                                                </div>
+                                            </div>
+
+
+
+
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+
+    @if (isChangePassword)
+    {
+        <div class="modal fade show" id="editModalHistory" tabindex="-1" style="display:flex;padding-top:3rem!important" aria-modal="true" role="dialog">
+            <div class="modal-dialog" role="document" style="max-width:600px!important">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Change Password</h5>
+
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseChangePassword">
+                            <span aria-hidden="true" style="font-size: xx-large;">&times;</span>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+
+                                <div class="user-avatar-section">
+                                    <div class=" d-flex align-items-center flex-column">
+                                        <img src="data:image/png;base64,@FileImage" class="img-fluid rounded my-4" height="110" width="110" alt="@FullName" />
+                                        @* <img class="img-fluid rounded my-4" src="../../assets/img/avatars/10.png" height="110" width="110" alt="User avatar">*@
+                                        <div class="user-info text-center">
+                                            <h5 class="mb-2">@FullName</h5>
+                                            <span class="badge bg-label-secondary">@Group</span>
+                                            <span class="badge bg-label-secondary">@UserName</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h5 class="pb-2 border-bottom " style="padding-top:20px!important">Change Password</h5>
+                                <div class="info-container">
+
+                                    <div class="row">
+                                        <div class="col-md-12" style="padding-top:0px!important">
+                                            <MudTextField @bind-Value="@modelPa.Password" autocomplete="new-password" Label="Password" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+
+                                        </div>
+                                        <div class="col-md-12" style="padding-top:10px!important">
+                                            <MudTextField @bind-Value="@modelPa.NewPassword" autocomplete="new-password" Label="New Password" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="@PasswordInputNew" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIconNew" OnAdornmentClick="ButtonTestNewclick" AdornmentAriaLabel="Show Password" />
+
+                                        </div>
+                                        <div class="col-md-12" style="padding-top:10px!important">
+                                            <MudTextField @bind-Value="@modelPa.ConfirmNewPassword" autocomplete="new-password" Label="Re New Password" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="@PasswordInputReNew" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIconReNew" OnAdornmentClick="ButtonTestReNewclick" AdornmentAriaLabel="Show Password" />
+
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-1">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <button type="button" class="btn btn-primary" style="width:100px!important" @onclick="Updatepassword">
+                                                Update
+                                            </button>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <button type="button" class="btn btn-warning" @onclick="CloseChangePassword" style="width: 100px !important">
+                                                Exit
+                                            </button>
+                                        </div>
+
+
+                                    </div>
+
+                                </div>
+
+
+
+
+
+
+                            </div>
+
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    }
+
+
+
+    @if (isSession)
+    {
+        <div class="modal fade show" id="editModalHistory" tabindex="-1" style="display:flex;padding-top:3rem!important" aria-modal="true" role="dialog">
+            <div class="modal-dialog" role="document" style="max-width:600px!important">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3 class="modal-title">Time Out System</h3>
+
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="CloseTimeOut">
+                            <span aria-hidden="true" style="font-size: xx-large;">&times;</span>
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="row" style="padding-top:20px!important;padding-bottom:10px!important">
+                                    <h5> Your session will expire because you have been inactive for a long time. Click Reset to reset expire time out. Redirect for  @TimeOutSession  seconds.</h5>
+                                </div>
+                                <div class="row" style="padding-bottom:10px!important">
+                                    <div class="col-md-4">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <button type="button" class="btn btn-primary" style="width:100%!important" @onclick="ResetSession">
+                                            Reset
+                                        </button>
+                                    </div>
+                                    @*  <div class="col-md-5">
+                                        <button type="button" class="btn btn-warning" @onclick="CloseTimeOut" style="width: 200px !important">
+                                            Exit
+                                        </button>
+                                    </div> *@
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    }
+
+
+</div>
+<style>
+    /*   small, .small {
+    font-size: 85%!important;
+    } */
+</style>
+
+<!-- end Topbar -->
+@code {
+    public class UploadFileModel
+    {
+        public string?  UserID { get; set; } = "";
+        public List<CustomerProfileFile> SenderDocumentsLists { get; set; } = new List<CustomerProfileFile>();
+
+    }
+    public class ModelSearch
+    {
+        public string?  UserName { get; set; } = "";
+        public string?  FirstName { get; set; } = "";
+        public string?  LastName { get; set; } = "";
+        public string?  Phone { get; set; } = "";
+
+    }
+    public class ModelPassword
+    {
+        public string?  UserName { get; set; } = "";
+        public string?  Password { get; set; } = "";
+        public string?  NewPassword { get; set; } = "";
+        public string?  ConfirmNewPassword { get; set; } = "";
+
+    }
+    public string?  SearchSender = "Search Sender";
+    public string?  FileImage { get; set; }
+    public ModelSearch model = new ModelSearch();
+    public ModelPassword modelPa = new ModelPassword();
+    private static System.Timers.Timer timer = new System.Timers.Timer(6000);
+    private double Credit = 0;
+    private double Amount = 0;
+    private Int64 Transaction = 0;
+    private string FullName = "";
+    private string FirstName = "";
+    private string LastName = "";
+    private string AgentName = "";
+    private string UserName = "";
+    private string Group = "";
+    private string ImageUrl = "";
+    private string UserID = "";
+    private string LinkSearch = "";
+    public DateTime datetime { get; set; } = DateTime.UtcNow.AddHours(-7);
+    private List<ExchangeRateList> ExchangeRateList = new List<ExchangeRateList>();
+    private List<ExchangeRateList> ExchangeRateList1 = new List<ExchangeRateList>();
+    private List<Tran> TranList = new List<Tran>();
+    private bool isLoadProfile = false;
+    private bool isEditProfile = false;
+    private bool isChangePassword = false;
+    private ElementReference E_FirstName;
+    private ElementReference E_LastName;
+    private ElementReference E_Password;
+    private ElementReference E_NewPassword;
+    private ElementReference E_ConfirmNewPassword;
+    public string?  C_FirstName { get; set; } = "white!important";
+    public string?  C_LastName { get; set; } = "white!important";
+    public string?  C_Password { get; set; } = "white!important";
+    public string?  C_NewPassword { get; set; } = "white!important";
+    public string?  C_ConfirmNewPassword { get; set; } = "white!important";
+    public string?  back { get; set; } = "white!important";
+    public string?  backerror { get; set; } = "yellow!important";
+    private long maxFileSize = 1024 * 15 * 1024;
+    private int maxAllowedFiles = 100;
+    private bool isLoading;
+    private bool isUploadFile = false;
+    private List<IBrowserFile> loadedFiles = new();
+    public List<CustomerProfileFile> SenderDocumentsList { get; set; } = new List<CustomerProfileFile>();
+    bool isShow;
+    private bool isComputer = true;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+    bool isShowNew;
+    InputType PasswordInputNew = InputType.Password;
+    string PasswordInputIconNew = Icons.Material.Filled.VisibilityOff;
+    bool isShowReNew;
+    InputType PasswordInputReNew = InputType.Password;
+    string PasswordInputIconReNew = Icons.Material.Filled.VisibilityOff;
+    public int Width { get; set; }
+
+    private bool isSession = false;
+    private Int64 TimeSession = 120;
+    private Int64 TimeOutSession = 0;
+    private Int64 Istimetran = 0;
+    private Int64 Istime = 0;
+    private Int64 IstimeA = 0;
+    private Int64 IstimeUser = 0;
+    string ExchangeRate = "Exchange Rate:";
+    private bool isrefresh = false;
+    void ButtonTestReNewclick()
+    {
+        @if (isShowReNew)
+        {
+            isShowReNew = false;
+            PasswordInputIconReNew = Icons.Material.Filled.VisibilityOff;
+            PasswordInputReNew = InputType.Password;
+        }
+        else
+        {
+            isShowReNew = true;
+            PasswordInputIconReNew = Icons.Material.Filled.Visibility;
+            PasswordInputReNew = InputType.Text;
+        }
+    }
+    void ButtonTestNewclick()
+    {
+        @if (isShowNew)
+        {
+            isShowNew = false;
+            PasswordInputIconNew = Icons.Material.Filled.VisibilityOff;
+            PasswordInputNew = InputType.Password;
+        }
+        else
+        {
+            isShowNew = true;
+            PasswordInputIconNew = Icons.Material.Filled.Visibility;
+            PasswordInputNew = InputType.Text;
+        }
+    }
+    void ButtonTestclick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+    private void LoadFiles(InputFileChangeEventArgs e)
+    {
+        StateHasChanged();
+        isLoading = true;
+        loadedFiles.Clear();
+        StateHasChanged();
+        foreach (var file in e.GetMultipleFiles(maxAllowedFiles))
+        {
+            try
+            {
+                loadedFiles.Add(file);
+            }
+            catch (Exception ex)
+            {
+                toastService.ShowWarning("File:" + file.Name + ", Error: " + ex.Message);
+            }
+        }
+        isLoading = false;
+        StateHasChanged();
+    }
+    private async Task<bool> ValidatePassword()
+    {
+        bool result = true;
+
+        if (string.IsNullOrEmpty(modelPa.Password))
+        {
+            C_Password = backerror;
+            await E_Password.FocusAsync();
+            toastService.ShowWarning("Enter Password");
+            result = false;
+        }
+        if (string.IsNullOrEmpty(modelPa.NewPassword))
+        {
+            C_NewPassword = backerror;
+            await E_NewPassword.FocusAsync();
+            toastService.ShowWarning("Enter New Password");
+            result = false;
+        }
+        else
+        {
+            if (modelPa.NewPassword.Length < 8)
+            {
+                result = false;
+                C_NewPassword = backerror;
+                toastService.ShowWarning("* New password must be at least 8 digits in length.");
+                await E_NewPassword.FocusAsync();
+            }
+            else
+            {
+                if (!Regex.IsMatch(modelPa.NewPassword, @"^(?=.*\d)(?=.*[a-z])(?=.*[A-Z])(?=.*\W).{6,20}$"))
+                {
+                    result = false;
+                    C_NewPassword = backerror;
+                    toastService.ShowWarning("At least 1 letter [a-z] lower,Upper, 1 number [0-9], and 1 special character");
+                    await E_NewPassword.FocusAsync();
+                }
+                else
+                {
+                    C_NewPassword = back;
+                }
+            }
+        }
+        if (string.IsNullOrEmpty(modelPa.ConfirmNewPassword))
+        {
+            C_ConfirmNewPassword = backerror;
+            await E_ConfirmNewPassword.FocusAsync();
+            toastService.ShowWarning("Enter Confirm New Password");
+            result = false;
+        }
+        if (!string.IsNullOrEmpty(modelPa.ConfirmNewPassword) && !string.IsNullOrEmpty(modelPa.NewPassword))
+        {
+            if (modelPa.ConfirmNewPassword != modelPa.NewPassword)
+            {
+                C_NewPassword = backerror;
+                C_ConfirmNewPassword = backerror;
+                await E_NewPassword.FocusAsync();
+                toastService.ShowWarning("new Password and Confirm New Password is not Match");
+                result = false;
+            }
+        }
+        StateHasChanged();
+        return result;
+    }
+    private async Task<bool> ValidateUpload()
+    {
+        bool result = true;
+
+        if (string.IsNullOrEmpty(model.FirstName))
+        {
+            C_FirstName = backerror;
+            await E_FirstName.FocusAsync();
+            toastService.ShowWarning("Enter First Name");
+            result = false;
+        }
+        if (string.IsNullOrEmpty(model.LastName))
+        {
+            C_LastName = backerror;
+            await E_LastName.FocusAsync();
+            toastService.ShowWarning("Enter Last Name");
+            result = false;
+        }
+        StateHasChanged();
+
+        return result;
+    }
+    protected async void Updatepassword()
+    {
+        try
+        {
+            StateHasChanged();
+            if (await ValidatePassword())
+            {
+                dynamic payload = new
+                {
+                    UserID = AuthService.userMTRedSun.Id,
+                    UserName = AuthService.userMTRedSun.UserName,
+                    AgentID = AuthService.userMTRedSun.AgentID,
+                    Password = modelPa.Password,
+                    NewPassword = modelPa.NewPassword
+                };
+
+                StateHasChanged();
+                var resp = await HttpService.Request("post", "/Customer/ChangePassword", payload);
+                if (resp.Status.ToString() == "200")
+                {
+                    isChangePassword = false;
+                    toastService.ShowSuccess("Change Password successfull");
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+
+                this.StateHasChanged();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            isUploadFile = false;
+            toastService.ShowWarning(ex.Message);
+        }
+        isUploadFile = false;
+        StateHasChanged();
+    }
+    protected async void UploadFile()
+    {
+        try
+        {
+            StateHasChanged();
+            isUploadFile = true;
+            if (await ValidateUpload())
+            {
+                List<CustomerProfileFile> SenderDocumentsLists = new List<CustomerProfileFile>();
+                CustomerProfileFile SenderDocumentsfile = new CustomerProfileFile();
+                foreach (var file in loadedFiles)
+                {
+
+                    SenderDocumentsfile.FileName = file.Name.ToString();
+                    var buffers = new byte[file.Size];
+                    await file.OpenReadStream(maxFileSize).ReadAsync(buffers);
+                    SenderDocumentsfile.FileLoad = buffers;
+                    FileImage = Convert.ToBase64String(buffers);
+                    StateHasChanged();
+                }
+                SenderDocumentsfile.UserID = AuthService.userMTRedSun.Id;
+                SenderDocumentsfile.LastName = model.LastName;
+                SenderDocumentsfile.FirstName = model.FirstName;
+                SenderDocumentsLists.Add(SenderDocumentsfile);
+                if (SenderDocumentsLists.Count > 0)
+                {
+                    UploadFileModel modelf = new UploadFileModel();
+                    modelf.UserID = AuthService.userMTRedSun.Id;
+                    modelf.SenderDocumentsLists = SenderDocumentsLists;
+                    StateHasChanged();
+                    var resp = await HttpService.Request("post", "/Customer/UploadProfileFile", modelf);
+                    if (resp.Status.ToString() == "200")
+                    {
+                        loadedFiles.Clear();
+                        isLoadProfile = false;
+                        isEditProfile = false;
+                        toastService.ShowSuccess("Upload successfull");
+                    }
+                    else
+                    {
+                        toastService.ShowWarning(resp.Message.ToString());
+                    }
+                }
+                this.StateHasChanged();
+            }
+
+        }
+        catch (Exception ex)
+        {
+            isUploadFile = false;
+            toastService.ShowWarning(ex.Message);
+        }
+        isUploadFile = false;
+        StateHasChanged();
+    }
+    private async Task getLoad()
+    {
+        var dimension = await Service.GetDimensions();
+        Width = dimension.Width;
+        if (Width < 800)
+        {
+            isComputer = false;
+        }
+        else
+        {
+            isComputer = true;
+        }
+        StateHasChanged();
+        if (AuthService.userMTRedSun != null)
+        {
+            string UserID1 = AuthService.userMTRedSun.Id == null ? "" : AuthService.userMTRedSun.Id.ToString();
+            if (!string.IsNullOrEmpty(UserID1))
+            {
+                StateHasChanged();
+
+                FullName = AuthService.userMTRedSun.FullName;
+                Group = AuthService.userMTRedSun.GroupName;
+                ImageUrl = AuthService.userMTRedSun.ImageUrl == null ? "" : AuthService.userMTRedSun.ImageUrl.ToString();
+                AgentName = AuthService.userMTRedSun.AgentName;
+                UserID = AuthService.userMTRedSun.Id;
+                FirstName = AuthService.userMTRedSun.FirstName;
+                LastName = AuthService.userMTRedSun.LastName;
+                UserName = AuthService.userMTRedSun.UserName;
+                if (AuthService.userMTRedSun.FileImage != null)
+                {
+                    FileImage = Convert.ToBase64String(AuthService.userMTRedSun.FileImage);
+                }
+
+                datetime = DateTime.UtcNow.AddHours(-7);
+                dynamic payload = new
+                {
+                    AgentID = AuthService.userMTRedSun.AgentID
+                };
+                if ((AuthService.userMTRedSun.AgentType == null ? "" : AuthService.userMTRedSun.AgentType.ToString()) != "3")
+                {
+
+                    LinkSearch = "/Customer/SearchCustomer";
+                    ExchangeRateListResp resp = await HttpService.Post<ExchangeRateListResp>("/Index/GetHeaderExchangeRate", payload);
+                    if (resp.Status == 200)
+                    {
+                        ExchangeRateList = resp.Content.ExchangeRateList;
+                        ExchangeRateList1 = resp.Content.ExchangeRateList1;
+                        // TranList = resp.Content.TranList;
+                    }
+                    else
+                    {
+                        ExchangeRateList = new List<ExchangeRateList>();
+                        ExchangeRateList1 = new List<ExchangeRateList>();
+                        /* TranList = new List<Tran>(); */
+                    }
+                    await getranList();
+                }
+                else
+                {
+                    ExchangeRate = "";
+                    LinkSearch = "";
+                    SearchSender = "";
+                }
+
+            }
+        }
+        timer.Elapsed += (sender, eventArgs) => OnTimerCallback();
+        timer.Start();
+    }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            if (AuthService.userMTRedSun == null)
+            {
+                await AuthService.Reset();
+                if (AuthService.userMTRedSun == null)
+                {
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    await getLoad();
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                await getLoad();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await AuthService.Logout();
+        }
+    }
+    private async Task getranList()
+    {
+        // await Task.Delay(30000);
+        if (AuthService.userMTRedSun != null)
+        {
+            if ((AuthService.userMTRedSun.AgentType == null ? "" : AuthService.userMTRedSun.AgentType.ToString()) != "3")
+            {
+                dynamic payload = new
+                {
+                    AgentID = AuthService.userMTRedSun.AgentID
+                };
+                getTranListResp resp = await HttpService.Post<getTranListResp>("/Index/GetTransactionList", payload);
+                if (resp.Status == 200)
+                {
+                    TranList = resp.Content.TranList;
+                }
+                else
+                {
+
+                    TranList = new List<Tran>();
+                }
+                StateHasChanged();
+            }
+        }
+    }
+    private async Task getranReList()
+    {
+        isrefresh=true;
+        StateHasChanged();
+        try
+        {
+            if (AuthService.userMTRedSun != null)
+            {
+                if ((AuthService.userMTRedSun.AgentType == null ? "" : AuthService.userMTRedSun.AgentType.ToString()) != "3")
+                {
+                    dynamic payload = new
+                    {
+                        AgentID = AuthService.userMTRedSun.AgentID
+                    };
+                    getTranListResp resp = await HttpService.Post<getTranListResp>("/Index/GetTransactionListAll", payload);
+                    if (resp.Status == 200)
+                    {
+                        TranList = resp.Content.TranList;
+                    }
+                    else
+                    {
+
+                        TranList = new List<Tran>();
+                    }
+                    StateHasChanged();
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+
+        }
+        // await Task.Delay(30000);
+
+        isrefresh = false;
+        StateHasChanged();
+    }
+    private void OnTimerCallback()
+    {
+        _ = InvokeAsync(() =>
+        {
+
+            // CheckUser();
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => timer.Dispose();
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await RunClock();
+            // await RunClockGetTrans();
+        }
+    }
+    protected override async void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // await JS.InvokeVoidAsync("runScript");
+
+        }
+    }
+    async Task RunClock()
+    {
+        while (true)
+        {
+            await Task.Delay(100);
+            DateTime datetime1 = DateTime.UtcNow.AddHours(-7);
+            DateTime utcDate1 = datetime1.ToUniversalTime();
+            datetime = utcDate1;
+            Istime += 1;
+            IstimeUser += 1;
+            Istimetran += 1;
+            if (Istimetran == 200)
+            {
+                await RunClockGetTrans();
+                Istimetran = 0;
+            }
+            if (Istime==70)
+            {
+                await Checktimeout();
+                Istime = 0;
+            }
+
+            if (IstimeUser == 140)
+            {
+                await CheckUser();
+                IstimeUser = 0;
+            }
+            StateHasChanged();
+            if (isSession)
+            {
+                await Task.Delay(90);
+                IstimeA += 1;
+                if (TimeOutSession>0)
+                {
+                    TimeOutSession -= 1;
+                    if (IstimeA==10)
+                    {
+                        await Checktimeout2();
+                        IstimeA = 0;
+                    }
+                }
+                else
+                {
+                    await Checktimeout2();
+                    if (isSession)
+                    {
+                        isSession = false;
+                        Logout();                        
+                    }
+
+                }
+            }
+            StateHasChanged();
+        }
+    }
+    async Task RunClockGetTrans()
+    {
+        if (AuthService.userMTRedSun != null)
+        {
+            if ((AuthService.userMTRedSun.AgentType == null ? "" : AuthService.userMTRedSun.AgentType.ToString()) != "3")
+            {
+                await getranList();
+            }
+        }
+    }
+    async Task Checktimeout()
+    {
+        // while (true)
+        // {
+
+        if (!isSession)
+        {
+            if(AuthService.userMTRedSun!=null)
+            {
+                dynamic payload = new
+                {
+                    UserID = AuthService.userMTRedSun.Id,
+                    UserName = AuthService.userMTRedSun.UserName,
+                };
+                var respOut = await HttpService.Request("post", "/Index/CheckTimeSession", payload);
+                if (respOut.Status.ToString() == "200")
+                {
+                    Int64.TryParse(respOut.Content == null ? "0" : respOut.Content.ToString(), out TimeOutSession);
+                }
+                if (TimeSession >= TimeOutSession)
+                {
+                    isSession = true;
+                }
+            }
+        }
+        StateHasChanged();
+    }
+    async Task Checktimeout2()
+    {
+        if (AuthService.userMTRedSun != null)
+        {
+            dynamic payload = new
+            {
+                UserID = AuthService.userMTRedSun.Id,
+                UserName = AuthService.userMTRedSun.UserName,
+            };
+            var respOut = await HttpService.Request("post", "/Index/CheckTimeSession", payload);
+            if (respOut.Status.ToString() == "200")
+            {
+                Int64.TryParse(respOut.Content == null ? "0" : respOut.Content.ToString(), out TimeOutSession);
+            }
+            if (TimeSession >= TimeOutSession)
+            {
+                isSession = true;
+            }
+            else
+            {
+                isSession = false;
+            }
+        }
+
+
+
+        StateHasChanged();
+    }
+    async Task CheckUser()
+    {
+        try
+        {
+            if (AuthService.userMTRedSun != null)
+            {
+                if (!string.IsNullOrEmpty((AuthService.userMTRedSun.Id == null ? "" : AuthService.userMTRedSun.Id.ToString())))
+                {
+                    // await Task.Delay(20000);
+                    dynamic payload = new
+                    {
+                        UserID = AuthService.userMTRedSun.Id == null ? "" : AuthService.userMTRedSun.Id.ToString(),
+                        UserName = AuthService.userMTRedSun.UserName == null ? "" : AuthService.userMTRedSun.UserName.ToString()
+                    };
+                    var respOut = await HttpService.Request("post", "/Index/CheckIsxistUser", payload);
+                    if (respOut.Status.ToString() == "99")
+                    {
+                        isSession = false;
+                        await AuthService.Logout();
+
+                    }
+                }
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            //toastService.ShowError("no User ID check user");
+        }
+
+    }
+    private async void Logout()
+    {
+        await  AuthService.Logout();
+    }
+    private void ViewProfile()
+    {
+        isLoadProfile = true;
+        model.FirstName = FirstName;
+        model.LastName = LastName;
+        this.StateHasChanged();
+    }
+    private void Editprofile()
+    {
+        if (isEditProfile)
+        {
+            isEditProfile = false;
+        }
+        else
+        {
+            isEditProfile = true;
+        }
+        this.StateHasChanged();
+    }
+    private void CloseProfile()
+    {
+        isLoadProfile = false;
+        this.StateHasChanged();
+    }
+    private void ChangePassword()
+    {
+        isChangePassword = true;
+        modelPa = new ModelPassword();
+
+        this.StateHasChanged();
+    }
+    private void CloseChangePassword()
+    {
+        isChangePassword = false;
+        this.StateHasChanged();
+    }
+    private void CloseTimeOut()
+    {
+        isSession = false;
+        this.StateHasChanged();
+    }
+
+    private async Task ResetSession()
+    {
+        if (AuthService.userMTRedSun != null)
+        {
+            dynamic payload = new
+            {
+                UserID = AuthService.userMTRedSun.Id,
+                UserName = AuthService.userMTRedSun.UserName,
+            };
+            var respOut = await HttpService.Request("post", "/Index/UpdateSession", payload);
+            isSession = false;
+            this.StateHasChanged();
+        }
+    }
+}

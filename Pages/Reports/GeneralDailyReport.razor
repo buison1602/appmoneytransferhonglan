@@ -1,0 +1,1521 @@
+﻿@page "/Reports/GeneralDailyReport"
+<PageTitle>General Daily Report</PageTitle>
+@using System.IO
+@attribute [Authorize]
+@inject IHttpService HttpService;
+@inject IAuthService AuthService;
+@inject IJSRuntime JS;
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration;
+@inject  Blazored.Toast.Services.IToastService toastService;
+@inject NavigationManager NavigationManager;
+@using System.Data;
+@using AppMoneyTransferRS.XLS
+@inject BrowserService Service
+<!-- Start Content-->
+<div class="container-fluid" style="padding-left: 0px!important;padding-right: 15px!important;background:white!important;background-color:white!important;max-height:@MaxHeightBody!important;height:@MaxHeightBody!important;">
+    <!-- start page title -->
+    <div class="row" style="padding-bottom: 2px!important;padding-top:5px!important" @onkeypress="@KeyPressHandler">
+        <div class="col-12" style="padding-right:0px!important">
+            <div class="card">
+               <div class="card-header-new" style="padding:15px 5px 5px 5px!important">
+                    <section class="ss-panel-new">
+                        <span class="ss-header-new">General Daily Report</span>
+                        <EditForm Model="@model">
+                            <div class="row g-1">
+
+
+                                <div class="col-md-2" style="padding-top:3px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important;padding-top:6px!important">
+                                        <div class="did-floating-label-content">
+                                            <DateInput TValue="DateTime?" class="did-floating-input" Value="@model.FromDate" ValueChanged="@((DateTime? value) => model.FromDate = value)" Placeholder="Enter Date" DateFormat="MM/dd/yyyy" />
+                                            <label class="did-floating-label" >From Date	</label>
+                                        </div>
+                                    </div>
+                                    <div style="float: left; width: 40%; padding-left: 0px!important; text-align: left!important">
+                                        <div class="did-floating-label-content">
+                                            <MudTimePicker  Label="From time" id="FromTime" @bind-Time="model.FromTime" TimeEditMode="TimeEditMode.Normal" Variant="Variant.Outlined" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:3px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important;padding-top:6px!important">
+                                        <div class="did-floating-label-content">
+                                            <DateInput TValue="DateTime?" class="did-floating-input" Value="@model.ToDate" ValueChanged="@((DateTime? value) => model.ToDate = value)" Placeholder="Enter Date" DateFormat="MM/dd/yyyy" />
+                                            <label class="did-floating-label">To Date	</label>
+                                        </div>
+                                    </div>
+                                    <div style="float: left; width: 40%; padding-left: 0px!important; text-align: left!important">
+                                        <div class="did-floating-label-content">
+                                            <MudTimePicker Label="To time" id="ToTime" @bind-Time="model.ToTime" TimeEditMode="TimeEditMode.Normal" Variant="Variant.Outlined" />
+                                        </div>
+                                    </div>
+                                </div>
+                               <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select"  id="FromCountry" @bind="@model.FromCountry" aria-label="From Country selection">
+                                            @foreach (var country in SendCountryList)
+                                            {
+                                                <option value="@country.CountryCode">@country.CountryName</option>}
+                                        </select>
+
+                                        <label class="did-floating-label" for="FromCountry">From Country</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="ToCountry" @bind="@model.ToCountry" aria-label="To Country selection">
+                                            @foreach (var country in ReceiveCountryList)
+                                            {
+                                                <option value="@country.CountryCode">@country.CountryName</option>}
+                                        </select>
+
+                                        <label class="did-floating-label" for="ToCountry">To Country</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select id="StateID"
+                                        name="formValidationSelect2"
+                                        class="did-floating-select"
+                                        data-allow-clear="true" @bind="@model.StateID" aria-label="State selection">
+                                            @foreach (var state in StateList)
+                                            {
+                                                <option value="@state.StateCode">@state.StateName</option>
+                                            }
+                                        </select>
+
+                                        <label class="did-floating-label" for="StateID">State</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="AgentID" name="AgentID" @bind="@model.AgentID" aria-label="Agent selection">
+                                            @if (AgentList.Count > 0)
+                                            {
+                                                @foreach (var agent in AgentList)
+                                                {
+                                                    <option value="@agent.Agent_ID">@agent.Agent_Name</option>
+                                                }
+                                            }
+                                        </select>
+
+                                        <label class="did-floating-label" for="AgentID">Agent</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="FromCurrency" @bind="@model.FromCurrency" aria-label="From Currency selection">
+                                            @if (SendCurrencyList.Count > 0)
+                                            {
+                                                @foreach (var currency in SendCurrencyList)
+                                                {
+                                                    <option value="@currency.CurrencyCode">@currency.CurrencyCode</option>}}
+                                        </select>
+
+                                        <label class="did-floating-label" for="FromCurrency">From Currency</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="ToCurrency" @bind="@model.ToCurrency" aria-label="To Currency selection">
+                                            @if (ReceiveCurrencyList.Count > 0)
+                                            {
+                                                @foreach (var currency in ReceiveCurrencyList)
+                                                {
+                                                    <option value="@currency.CurrencyCode">@currency.CurrencyCode</option>
+                                                }}
+                                        </select>
+
+                                        <label class="did-floating-label" for="ToCurrency">To Currency</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <input type="number" class="did-floating-input" id="FromAmount" @bind="@model.FromAmount" placeholder=" ">
+                                        <label class="did-floating-label" for="FromAmount">From Amount</label>
+                                    </div>
+
+                                </div>
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <input type="number" class="did-floating-input" id="ToAmount" @bind="@model.ToAmount" placeholder=" ">
+                                        <label class="did-floating-label" for="ToAmount">To Amount</label>
+                                    </div>
+                                </div>
+
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="PaymentAgent" @bind="@model.PaymentAgent" aria-label="Payment Agent selection">
+                                            @if (PaymentAgentList.Count > 0)
+                                            {
+                                                @foreach (var paymentAgent in PaymentAgentList)
+                                                {
+                                                    <option value="@paymentAgent.PAY_AG_ID">@paymentAgent.AGENT_PAYMENT_NAME</option>}}
+                                        </select>
+                                        <label class="did-floating-label" for="PaymentAgent">Payment Agent</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="TypeTran" @bind="@model.TypeTran" aria-label="Type Tran selection">
+                                            @if (TypeTranList.Count > 0)
+                                            {
+                                                @foreach (var TypeTran in TypeTranList)
+                                                {
+                                                    <option value="@TypeTran.TypeID">@TypeTran.TypeName</option>}}
+                                        </select>
+                                        <label class="did-floating-label" for="TypeTran">Type Tran</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="PaymentMethod" @bind="@model.PaymentMethod" aria-label="Payment Method selection">
+                                            @if (PaymentMethodList.Count > 0)
+                                            {
+                                                @foreach (var paymentMethod in PaymentMethodList)
+                                                {
+                                                    <option value="@paymentMethod.PayTypeID">@paymentMethod.PayTypeName</option>}}
+
+                                        </select>
+                                        <label class="did-floating-label" for="PaymentMethod">Payment Method</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="SearchBy" @bind="@model.SearchBy" aria-label="Search by selection">
+                                            @if (SearchList.Count > 0)
+                                            {
+                                                @foreach (var search in SearchList)
+                                                {
+                                                    <option value="@search.SearchID">@search.SearchName</option>
+                                                }               }
+                                        </select>
+                                        <label class="did-floating-label" for="SearchBy">Search by</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <input type="text" class="did-floating-input" id="ContentSearch" @bind="@model.ContentSearch" placeholder=" ">
+                                        <label class="did-floating-label" for="ContentSearch">Search Content</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-2" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <div class="did-floating-label-content">
+                                        <select class="did-floating-select" id="PaymentMode" @bind="@model.PaymentMode" aria-label="Payment Mode selection">
+                                            @foreach (var tran in PaymentModeList)
+                                            {
+                                                <option value="@tran.PAYABLE_CODE">@tran.DESCRIPTION</option>
+                                            }
+                                        </select>
+                                        <label class="did-floating-label" for="PaymentMode">Payment Mode</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-1" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <button type="button" class="btn btn-primary" @onclick="ViewReport" disabled="@isViewingReport" style="width:100%!important">
+                                        @if (isViewingReport)
+                                        {
+                                            <span class="spinner-border spinner-border-sm mr-1"></span>}
+                                        View Report
+                                    </button>
+                                </div>
+                                <div class="col-md-1" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <button type="button" class="btn btn-primary" @onclick="ExportExcel" disabled=@isExportExcel style="display:@displayVerify;width:100%!important">
+                                        @if (isExportExcel)
+                                        {
+                                            <span class="spinner-border spinner-border-sm mr-1"></span>}
+                                        Export Excel
+                                    </button>
+                                </div>
+                                <div class="col-md-1" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <button type="button" class="btn btn-primary" @onclick="PrintReport" disabled=@isPrintReport style="display:@displayVerify;width:100%!important">                                        
+                                        @if (isPrintReport)
+                                        {
+                                            <span class="spinner-border spinner-border-sm mr-1"></span>
+                                        }
+                                        Print Report
+                                    </button>
+                                </div>
+                                <div class="col-md-1" style="padding-top:10px!important;padding-left:3px!important;padding-right:3px!important">
+                                    <button type="button" class="btn btn-primary" @onclick="DownloadReport" disabled=@isDownload style="display:@displayVerify;width:100%!important">
+                                        @if (isDownload)
+                                        {
+                                            <span class="spinner-border spinner-border-sm mr-1"></span>
+                                        }
+                                        Download
+                                    </button>
+                                </div>
+                            </div>
+
+                        </EditForm>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </div>
+    @if (viewReport)
+    {
+        @if (LoadingReport)
+        {
+            <div class="spinner"></div> 
+        }
+        else
+        {
+            <div class="row"  style="background-color:white!important">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;height: 80px;width: 100%;">
+                            <table class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important;">
+                                <thead>
+                                    <tr>
+                                        <th>No. of Trans</th>
+                                        <th>Amount</th>
+                                        <th>Sender Fee</th>
+                                        <th>Agent Fee</th>
+                                        <th>Other Fee</th>
+                                        <th>Tax</th>
+                                        <th>Discount</th>
+                                        <th>Total Amount</th>
+                                        <th>Total Agent Comm</th>
+                                        <th>Total Due</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in reportSummarys)
+                                    {
+                                        <tr>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n0}", item.Trans_No)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTAL_AMOUNT)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTAL_FEE)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.AAGENT_FEE)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.OTHER_FEE)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTAL_TAX)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTAL_DISCOUNT_FEE)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTAL_AMT_USD)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.TOTALAGENT_COMM)
+                                                </span></td>
+                                            <td style="text-align:right!important"> <span class="emp_name text-truncate fw-semibold">
+                                                    @String.Format("{0:n2}", item.GRANT_TOTAL)
+                                                </span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div> 
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-datatable dataTable_select table-responsive" style="padding-bottom: 0px!important;padding-top: 5px!important;max-height:@MaxHeight!important;height:@MaxHeight!important;">
+                            <table class="table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select" style="border-color: #f3f4f4!important">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:center!important">  <i class="fas fa-edit" /></th>
+                                        <th>No</th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Trans Infor</span></div></th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name">Payment Agent</span></div></th>
+                                        <th>Sender Infor</th>
+                                        <th>ID Infor</th>
+
+                                        <th>Receiver Infor </th>
+                                        <th>
+                                            <div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Bank Infor</span>
+                                            </div>
+                                        </th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name">Payment Method</span></div>	</th>
+                                        <th>Amount	Information	</th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Total Paid</span></div>			</th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Created by</span></div>			</th>
+                                        @* <th><div class="d-flex flex-column">
+                    <span class="emp_name text-truncate">Updated by</span></div>			</th> *@
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Approved ?</span></div>			</th>
+                                        <th><div class="d-flex flex-column">
+                                                <span class="emp_name text-truncate">Print </span></div>			</th>
+
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    @foreach (var item in reportDetails)
+                                    {
+
+                                        <tr style="--bs-table-striped-bg:@item.bgcolor;background:@item.bgcolors">
+                                            <td style="text-align:center!important;padding-left: 7px;padding-right: 5px!important">
+                                                <a target="_blank" href="@item.linkTransID" 
+                                                class="btn btn-link" style="padding-left:0px!important"><i class="fas fa-edit" /></a>
+
+                                            </td>
+                                            <td>@item.RowNumber</td>
+
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate fw-semibold">
+                                                        @item.TRANS_ID
+                                                    </span>
+                                                    <span class="emp_post text-truncate text-muted">@item.TRANS_DATE.ToString("MM/dd/yyyy HH:mm:ss")</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.FundDateConvent</span>
+                                                    <span class="emp_post text-truncate text-muted  fw-semibold">@item.AGENT_NAME</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.typetran</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.REF_NO</span>
+                                                    <span class="emp_post text-muted">@item.TRANTYPENAME</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate"> @item.PAYMENT_AGENT</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate fw-semibold"> @item.FULLNAME</span>
+                                                    <span class="emp_post text-muted">@item.S_FULLADDRESS</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.PHONE1</span>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+
+                                                    @if (!String.IsNullOrEmpty(item.DRIVER_ID))
+                                                    {
+                                                        <span class="emp_name text-truncate">@item.ID_TYPE: @item.DRIVER_ID</span>
+                                                        @if (!String.IsNullOrEmpty(item.DRIVER_ID))
+                                                        {
+                                                            <span class="emp_name text-truncate">
+                                                                Country Issue: @item.COUNTRY_ISSUE
+                                                            </span>
+                                                            <span class="emp_name text-truncate">
+                                                                State Issue: @item.STATE_ISSUE
+                                                            </span>
+                                                            <span class="emp_name text-truncate">
+                                                                Expiration: @item.EXPIRATION
+                                                            </span>
+                                                        }
+                                                        <span class="emp_name text-truncate " style="padding-top: 0px!important;text-align:left!important;padding-left:0px!important">
+                                                            DOB: @item.DOB
+                                                        </span>
+                                                    }
+                                                    @if (!String.IsNullOrEmpty(item.SSN))
+                                                    {
+                                                        <span class="emp_name text-truncate">
+                                                            SSN: @item.SSN
+                                                        </span>
+                                                    }
+                                                    @if (!String.IsNullOrEmpty(item.OCCUPATION))
+                                                    {
+                                                        <span class="emp_name">
+                                                            Occupation: @item.OCCUPATION
+                                                        </span>
+                                                    }
+                                                </div>
+
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate fw-semibold"> @item.B_FULLNAME</span>
+                                                    <span class="emp_post text-muted">@item.R_FULLADDRESS</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.B_PHONE1</span>
+                                                    <span class="emp_post text-truncate text-muted">@item.B_PHONE2</span>
+                                                    @* <span class="emp_post text-truncate text-muted">@item.B_COUNTRY</span>     *@
+                                                </div>
+
+                                            </td>
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    @if (!string.IsNullOrEmpty(item.ACCOUNT_NO))
+                                                    {
+                                                        <span class="emp_name text-truncate">Account: @item.ACCOUNT_NO</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(item.R_BANK_NAME))
+                                                    {
+                                                        @if (!item.R_BANK_NAME.ToUpper().Contains("SELECT BANK"))
+                                                        {
+                                                            <span class="emp_post text-muted">Bank Name: @item.R_BANK_NAME</span>
+                                                        }
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(item.PASSPORT_NO))
+                                                    {
+                                                        <span class="emp_post text-truncate text-muted">Rec ID: @item.PASSPORT_NO</span>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(item.RelationwithSenderNote))
+                                                    {
+                                                        <span class="emp_post text-muted">Relation with Sender: @item.RelationwithSenderNote</span>
+                                                    }
+                                                </div>
+                                            </td>
+                                            <td style="text-align:center!important">
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate"> @item.PAY_TYPE</span>
+                                                    <span class="emp_name text-truncate"> @item.CN_TRANS_NO</span>
+                                                </div>
+                                            </td>
+                                            <td style="text-align:right!important">
+                                                <div class="d-flex flex-column text-truncate" style="min-width:200px!important">
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold"> Send Amount:</span>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold">@String.Format("{0:n2}", item.AMOUNT)</span>
+                                                        </div>
+
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Services Fee:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.SERVICE_FEE)</small>
+                                                        </div>
+
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Other Fee:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.OTHERFEE)</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Tax Fee:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.TAXFEE)</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Discount:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.DISCOUNT_FEE)</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold"> Total Amount:</span>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold">@String.Format("{0:n2}", item.TOTAL_AMT_USD)</span>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Agent Fee:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.AG_COMM_AMT)</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <small class="emp_post text-truncate">Agent Comm:</small>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <small class="emp_post text-truncate">@String.Format("{0:n2}", item.AGENT_COMM)</small>
+                                                        </div>
+                                                    </div>
+                                                    <div class="row  text-truncate" style="margin-left:0px">
+                                                        <div style="float: left; width: 60%; padding-left: 0px!important; text-align: left!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold"> Total Due:</span>
+                                                        </div>
+                                                        <div style="float: left; width: 40%; padding-left: 0px!important; text-align: right!important">
+                                                            <span class="emp_name text-truncate text-muted fw-semibold">@String.Format("{0:n2}", item.Total_Due)</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td style="text-align:right!important">
+                                                <div class="d-flex flex-column">
+                                                    @if (item.B_PAY_BY == "VND")
+                                                    {
+                                                        <span class="emp_name text-truncate text-muted fw-semibold"> @String.Format("{0:n0}", item.B_AMT_PAY) @item.B_PAY_BY </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="emp_name text-truncate text-muted fw-semibold"> @String.Format("{0:n2}", item.B_AMT_PAY) @item.B_PAY_BY </span>
+                                                    }
+
+                                                </div>
+                                            </td>
+
+                                            <td>
+                                                <div class="d-flex flex-column">
+                                                    <span class="emp_name text-truncate"> @item.USER_INPUT</span>
+                                                    <span class="emp_post text-muted">@item.TRANS_DATE.ToString("MM/dd/yyyy HH:mm:ss")</span>
+                                                </div>
+                                            </td>
+                                            <td style="text-align:center!important" class="fw-semibold">@item.Approved</td>
+                                            <td style="text-align:center!important">
+                                                <div class="d-flex flex-column">
+                                                    <div class="d-flex flex-column">
+                                                        <span class="emp_name text-truncate">
+                                                            <button type="button" class="btn btn-link" @onclick="() => viewReceipt(item.TransIDDerypt)">
+                                                                Print Receipt
+                                                            </button>
+                                                        </span><br>
+                                                        <span class="emp_name text-truncate">
+                                                            @if (item.AGG)
+                                                            {
+                                                                <button type="button" class="btn btn-link" @onclick="() => viewBSA(item.TransIDDerypt)"> Print BSA </button>
+                                                            }
+                                                        </span><br>
+                                                        <span class="emp_name text-truncate">
+                                                            @if (item.IS_BH)
+                                                            {
+                                                                <button type="button" class="btn btn-link" @onclick="() => viewBehalf(item.TransIDDerypt)">
+                                                                    Print Behalf
+                                                                </button>
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row" style="padding-top:2px!important;padding-bottom:2px!important;">
+                <div class="col-sm-12 col-md-6"  style="float:right!important">
+                    <div class="dataTables_paginate paging_simple_numbers" id="basic-datatable_paginate" style="padding-right:10px!important">
+                        <button class="btn btn-customer"  @onclick="@(async()=> await NavigateToPage("first"))">First</button>
+                        <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("prev"))">Prev</button>
+                        @for (int i = startPage; i <= endPage; i++)
+                        {
+                            var currentPage = i;
+                            <button class="btn btn-customer @(currentPage==curPage?"btn-danger":"")"   @onclick="@(async()=> await RefreshRecord(currentPage))"> @i</button>}
+                        <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("next"))">Next</button>
+                        <button class="btn btn-customer"   @onclick="@(async()=> await NavigateToPage("last"))">Last</button>
+                    </div>
+
+                </div>
+
+                <div class="col-sm-12 col-md-3 float-left"  style="float:center!important">
+                    <div class="dataTables_length" id="basic-datatable_length" style="padding-top:10px!important">
+                        @noidungpage
+                    </div>
+                </div>
+                <div class="col-sm-12 col-md-3" style="float:left!important">
+                    <div class="dataTables_length" id="basic-datatable_length">
+
+                        <select name="basic-datatable_length" aria-controls="basic-datatable" class="form-select-pagesize" value="@pageSize" aria-label="Floating label select example" @onchange="ChangepageSize">
+                            @foreach (var pagesize in pagesizeModels)
+                            {
+                                <option value="@pagesize.PageID">@pagesize.PageName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+
+            </div>
+        }
+    }
+</div>
+@code{
+    private WeatherForecast[] forecasts;
+    List<pageSizeModel> pagesizeModels = new List<pageSizeModel>
+{
+        new pageSizeModel { PageID = 10, PageName = "10" },
+        new pageSizeModel { PageID = 20, PageName = "20" },
+        new pageSizeModel { PageID = 50, PageName = "50" },
+        new pageSizeModel { PageID = 100, PageName = "100" },
+        new pageSizeModel { PageID = 200, PageName = "200" },
+        new pageSizeModel { PageID = 500, PageName = "500" },
+        new pageSizeModel { PageID = 1000, PageName = "1000" },
+        new pageSizeModel { PageID = 2000, PageName = "2000" },
+        new pageSizeModel { PageID = 5000, PageName = "5000" },
+        new pageSizeModel { PageID = 500000, PageName = "All" }
+    };
+    public class Model
+    {
+        public string?  UserID { get; set; } = "";
+        public DateTime? FromDate { get; set; } = DateTime.UtcNow.AddHours(-7);
+        public DateTime? ToDate { get; set; } = DateTime.UtcNow.AddHours(-7);
+        public TimeSpan? FromTime { get; set; } = new TimeSpan(00, 00, 00);
+        public TimeSpan? ToTime { get; set; } = new TimeSpan(23, 59, 59);
+        public string?  FromCountry { get; set; } = "All";
+        public string?  ToCountry { get; set; } = "All";
+        public string?  StateID { get; set; } = "All";
+        public string?  AgentID { get; set; } = "All";
+        public string?  FromCurrency { get; set; } = "All";
+        public string?  ToCurrency { get; set; } = "All";
+        public double FromAmount { get; set; } = 0;
+        public double ToAmount { get; set; } = 1000000;
+        public string?  SearchBy { get; set; } = "All";
+        public string?  ContentSearch { get; set; } = "";
+        public string?  PaymentAgent { get; set; } = "All";
+        public string?  TypeTran { get; set; } = "All";
+        public string?  PaymentMethod { get; set; } = "All";
+        public int PageIndex = 1;
+        public int PageSize = 50;
+        public string?  PaymentMode { get; set; } = "All";
+
+
+
+    }
+
+    string Noidung = "";
+    ReponseTable[] ReponseTables = new ReponseTable[] { };
+    ReponseTable1[] ReponseTable1s = new ReponseTable1[] { };
+    private string ToastContent = "";
+    private string ToastPosition = "Right";
+    private bool viewReport = false;
+
+    private string ToastTitle = "";
+    private string ToastCSS = "";
+    private string ToastIcon = "";
+    private dynamic dates = new Array[] { };
+    private dynamic partners = new Array[] { };
+    private dynamic provinces = new Array[] { };
+    private dynamic branchs = new Array[] { };
+    private dynamic employees = new Array[] { };
+    private dynamic currencies = new Array[] { };
+    private dynamic paymentMethods = new Array[] { };
+    private dynamic batchs = new Array[] { };
+    private dynamic emailStatuses = new Array[] { };
+    private dynamic statuses = new Array[] { };
+    private dynamic searchs = new Array[] { };
+    private bool isloadCore = false;
+    private bool LoadingReport = false;
+    private bool isViewingReport = false;
+    private bool isExportExcel = false;
+    private bool isPrintReport = false;
+    private bool isDownload = false;
+    private dynamic reports = null;
+    private dynamic Table = new Array[] { };
+    private dynamic Table1 = new Array[] { };
+    private dynamic Table2 = new Array[] { };
+    private string error = "";
+    private string displayVerify = "None";
+    private string bgcolor = "";
+    private Model model = new Model();
+
+    public List<Users> Users { get; set; } = new List<Users>();
+    Users Userss { get; set; }
+    private string User { get; set; }
+
+    public List<SendCountryList> SendCountryList { get; set; } = new List<SendCountryList>();
+    SendCountryList SendCountryLists { get; set; }
+    private string SendCountrylist { get; set; }
+
+    public List<ReceiveCountryList> ReceiveCountryList { get; set; }= new List<ReceiveCountryList>();
+    ReceiveCountryList ReceiveCountryLists { get; set; }
+    private string ReceiveCountrylist { get; set; }
+
+    public List<SendCurrencyList> SendCurrencyList { get; set; } = new List<SendCurrencyList>();
+    SendCurrencyList SendCurrencyLists { get; set; }
+    private string SendCurrencylist { get; set; }
+
+    public List<ReceiveCurrencyList> ReceiveCurrencyList { get; set; } = new List<ReceiveCurrencyList>();
+    ReceiveCurrencyList ReceiveCurrencyLists { get; set; }
+    private string ReceiveCurrencylist { get; set; }
+
+    public List<SearchList> SearchList { get; set; } = new List<SearchList>();
+    SearchList SearchLists { get; set; }
+    private string Searchlist { get; set; }
+
+    public List<TypeTranList> TypeTranList { get; set; } = new List<TypeTranList>();
+    TypeTranList TypeTranLists { get; set; }
+    private string TypeTranlist { get; set; }
+
+    public List<AgentList> AgentList { get; set; } = new List<AgentList>();
+    AgentList AgentLists { get; set; }
+    private string Agentlist { get; set; }
+
+    public List<StateList> StateList { get; set; } = new List<StateList>();
+    StateList StateLists { get; set; }
+    private string Statelist { get; set; }
+
+    public List<PaymentAgentList> PaymentAgentList { get; set; } = new List<PaymentAgentList>();
+    PaymentAgentList PaymentAgentLists { get; set; }
+    private string PaymentAgentlist { get; set; }
+
+    public List<TransTypeList> PaymentModeList { get; set; }= new List<TransTypeList>();
+
+    public List<PaymentMethodList> PaymentMethodList { get; set; }
+    PaymentMethodList PaymentMethodLists { get; set; }
+    private string PaymentMethodlist { get; set; }
+    List<ReportDetail> reportDetails = new List<ReportDetail>();
+    List<ReportDetail> reportDetailsAll = new List<ReportDetail>();
+    List<ReportSummary> reportSummarys = new List<ReportSummary>();
+    string Account = "Account";
+    string BankName = "Bank Name";
+    string RecID = "Rec ID";
+    string RelationwithSender = "Relation with Sender";
+    string noidungpage = "";
+    int totalPages;
+    Int64 totalRecords;
+    Int64 curPage;
+    int pagerSize;
+    Int64 pageSize;
+    int startPage;
+    int endPage;
+    int firstPage;
+    int lastPage;
+    public int Height { get; set; } = 800; public int HeightBody { get; set; } = 800;
+    public String MaxHeight { get; set; } = "500px"; public String MaxHeightBody { get; set; } = "800px";
+    string pagename = "/Reports/GeneralDailyReport";
+    public List<MenuChildList> menuChildLists { get; set; } = new List<MenuChildList>();
+    public string?  class1 = "table-striped table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select";
+    public string?  class2 = "table table-bordered dt-select-table table table-bordered dataTable no-footer dt-checkboxes-select";
+    public async Task KeyPressHandler(KeyboardEventArgs e)
+    {
+        if (e.Key.ToLowerInvariant() == "enter")
+        {
+            ViewReport();
+        }
+    }
+
+    private async Task viewReceipt(string TransID)
+    {
+        try
+        {
+            if (!_jsInteropReady)
+            {
+                toastService.ShowWarning("JavaScript not ready. Please try again.");
+                return;
+            }
+
+            string url ="/CrystalReport/ViewReport?tid=" + TransID + "&type=Receipt";
+            await JS.InvokeVoidAsync("openUrl", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError($"Error opening receipt: {ex.Message}");
+        }
+    }
+    private async Task viewBSA(string TransID)
+    {
+        try
+        {
+            if (!_jsInteropReady)
+            {
+                toastService.ShowWarning("JavaScript not ready. Please try again.");
+                return;
+            }
+
+            string url ="/CrystalReport/ViewReport?tid=" + TransID + "&type=BSA";
+            //NavigationManager.NavigateTo(url);
+            await JS.InvokeVoidAsync("openUrl", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError($"Error opening BSA: {ex.Message}");
+        }
+    }
+    private async Task viewBehalf(string TransID)
+    {
+        try
+        {
+            if (!_jsInteropReady)
+            {
+                toastService.ShowWarning("JavaScript not ready. Please try again.");
+                return;
+            }
+
+            string url = "/CrystalReport/ViewReport?tid=" + TransID + "&type=Behalf";
+            //NavigationManager.NavigateTo(url);
+            await JS.InvokeVoidAsync("openUrl", url, "_blank");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            toastService.ShowError($"Error opening behalf report: {ex.Message}");
+        }
+    }
+    public async Task NavigateToPage(string direction)
+    {
+        switch (direction)
+        {
+            case "first":
+                SetPageSize("first");
+                curPage = startPage;
+                break;
+            case "next":
+                if (curPage < totalPages)
+                {
+                    if (curPage == endPage)
+                    {
+                        SetPageSize("forward");
+                    }
+                    curPage += 1;
+                }
+                break;
+            case "prev":
+                if (curPage > 1)
+                {
+                    if (curPage == startPage)
+                    {
+                        SetPageSize("back");
+                    }
+                    curPage -= 1;
+
+                }
+                break;
+            default:
+                SetPageSize("last");
+                curPage = totalPages;
+                break;
+        }
+
+        RefreshRecord(curPage);
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task refreshNoidung()
+    {
+        this.StateHasChanged();
+        Int64 Totalre = curPage * pageSize;
+        if (Totalre > totalRecords)
+        {
+            Totalre = totalRecords;
+        }
+        noidungpage = "Showing " + (((curPage - 1) * pageSize) + 1).ToString() + " to " + Totalre + " of " + totalRecords + " entries";
+        this.StateHasChanged();
+    }
+    public async Task SetPageSize(string direction)
+    {
+        this.StateHasChanged();
+        if (direction == "forward" && endPage < totalPages)
+        {
+            startPage = endPage + 1;
+            if (endPage + pagerSize < totalPages)
+            {
+                endPage = startPage + pagerSize - 1;
+            }
+            else
+            {
+                endPage = totalPages;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage == endPage)
+            {
+                startPage = endPage - pagerSize + 1;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+        }
+        else if (direction == "back" && startPage > 1)
+        {
+            startPage = startPage - 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "first")
+        {
+            startPage = 1;
+            endPage = startPage + pagerSize - 1;
+            if (endPage > totalPages)
+            {
+                endPage = totalPages;
+            }
+        }
+        else if (direction == "last")
+        {
+            startPage = totalPages - pagerSize + 1;
+            if (startPage <= 0)
+            {
+                startPage = 1;
+            }
+            endPage = totalPages;
+
+        }
+        refreshNoidung();
+        this.StateHasChanged();
+    }
+    public async Task RefreshRecord(Int64 currentPage)
+    {
+        curPage = currentPage;
+        await getData();
+        await refreshNoidung();
+
+        this.StateHasChanged();
+    }
+    public async Task getDataPrint(string Form = "", string FormName = "", string Action = "")
+    {
+        try
+        {
+            StateHasChanged();
+            isPrintReport = true;
+            dynamic payload = new
+            {
+                Form = Form,
+                FormName = FormName,
+                Action = Action,
+                UserID = model.UserID,
+                FromDate = Convert.ToDateTime(Convert.ToDateTime(model.FromDate).ToString("yyyy/MM/dd") + " " + model.FromTime),
+                ToDate = Convert.ToDateTime(Convert.ToDateTime(model.ToDate).ToString("yyyy/MM/dd") + " " + model.ToTime),
+                FromCountry = model.FromCountry,
+                ToCountry = model.ToCountry,
+                StateID = model.StateID,
+                AgentID = model.AgentID,
+                FromCurrency = model.FromCurrency,
+                ToCurrency = model.ToCurrency,
+                FromAmount = model.FromAmount,
+                ToAmount = model.ToAmount,
+                SearchBy = model.SearchBy,
+                ContentSearch = model.ContentSearch,
+                PaymentAgent = model.PaymentAgent,
+                TypeTran = model.TypeTran,
+                PaymentMethod = model.PaymentMethod,
+                PaymentMode = model.PaymentMode,
+                OptionView = "",
+                pageIndex = 1,
+                pageSize = 10000000000
+            };
+            List<resReceipt> resReceipts = new List<resReceipt>();
+            TransReceiptAllbase64Resp resp = await HttpService.Post<TransReceiptAllbase64Resp>("/Report/GeneralDailyReportPrint", payload);
+            if (resp.Status.ToString() == "200")
+            {
+                resReceipts=resp.Content;
+                if (resReceipts.Count > 0)
+                {
+                    foreach(var item in resReceipts)
+                    {
+                        if (!_jsInteropReady)
+                        {
+                            toastService.ShowWarning("JavaScript not ready for file download. Please try again.");
+                            break;
+                        }
+
+                        var fileStream = GetFileStream(item.ReceiptByte);
+                        using var streamRef = new DotNetStreamReference(stream: fileStream);
+                        await JS.InvokeVoidAsync("downloadFileFromStream", item.FileName, streamRef);
+                        Thread.Sleep(2000);
+                    }
+                }
+
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        isPrintReport = false;
+        this.StateHasChanged();
+    }
+    public async Task getDataAllPrint(string Form = "", string FormName = "", string Action = "")
+    {
+        try
+        {
+            StateHasChanged();
+            isDownload = true;
+            dynamic payload = new
+            {
+                Form = Form,
+                FormName = FormName,
+                Action = Action,
+                UserID = model.UserID,
+                FromDate = Convert.ToDateTime(Convert.ToDateTime(model.FromDate).ToString("yyyy/MM/dd") + " " + model.FromTime),
+                ToDate = Convert.ToDateTime(Convert.ToDateTime(model.ToDate).ToString("yyyy/MM/dd") + " " + model.ToTime),
+                FromCountry = model.FromCountry,
+                ToCountry = model.ToCountry,
+                StateID = model.StateID,
+                AgentID = model.AgentID,
+                FromCurrency = model.FromCurrency,
+                ToCurrency = model.ToCurrency,
+                FromAmount = model.FromAmount,
+                ToAmount = model.ToAmount,
+                SearchBy = model.SearchBy,
+                ContentSearch = model.ContentSearch,
+                PaymentAgent = model.PaymentAgent,
+                TypeTran = model.TypeTran,
+                PaymentMethod = model.PaymentMethod,
+                PaymentMode=model.PaymentMode,
+                OptionView = "",
+                pageIndex = 1,
+                pageSize = 10000000000
+            };
+            List<resReceipt> resReceipts = new List<resReceipt>();
+            TransReceiptAllbase64Resp resp = await HttpService.Post<TransReceiptAllbase64Resp>("/Report/GeneralDailyReportPrintAll", payload);
+            if (resp.Status.ToString() == "200")
+            {
+                resReceipts = resp.Content;
+                if (resReceipts.Count > 0)
+                {
+                    foreach (var item in resReceipts)
+                    {
+                        if (!_jsInteropReady)
+                        {
+                            toastService.ShowWarning("JavaScript not ready for file download. Please try again.");
+                            break;
+                        }
+
+                        var fileStream = GetFileStream(item.ReceiptByte);
+                        using var streamRef = new DotNetStreamReference(stream: fileStream);
+                        await JS.InvokeVoidAsync("downloadFileFromStream", item.FileName, streamRef);
+                        Thread.Sleep(2000);
+                    }
+                }
+
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        isDownload = false;
+        this.StateHasChanged();
+    }
+    public async Task getData( string Form = "",string FormName = "",string Action = "")
+    {
+        try
+        {
+            StateHasChanged();
+            LoadingReport = true;
+            dynamic payload = new
+            {
+                Form = Form,
+                FormName = FormName,
+                Action = Action,
+                UserID = model.UserID,
+                FromDate = Convert.ToDateTime(Convert.ToDateTime(model.FromDate).ToString("yyyy/MM/dd") + " " + model.FromTime),
+                ToDate = Convert.ToDateTime(Convert.ToDateTime(model.ToDate).ToString("yyyy/MM/dd") + " " + model.ToTime),
+                FromCountry = model.FromCountry,
+                ToCountry = model.ToCountry,
+                StateID = model.StateID,
+                AgentID = model.AgentID,
+                FromCurrency = model.FromCurrency,
+                ToCurrency = model.ToCurrency,
+                FromAmount = model.FromAmount,
+                ToAmount = model.ToAmount,
+                SearchBy = model.SearchBy,
+                ContentSearch = model.ContentSearch,
+                PaymentAgent = model.PaymentAgent,
+                TypeTran = model.TypeTran,
+                PaymentMethod = model.PaymentMethod,
+                PaymentMode=model.PaymentMode,
+                OptionView = "",
+                pageIndex = curPage,
+                pageSize = pageSize
+            };
+            GeneralReportResponse resp;
+            if(isloadCore)
+            {
+                resp = await HttpService.Post<GeneralReportResponse>("/api/Report/GeneralDailyReport", payload);
+            }
+            else
+            {
+                resp = await HttpService.Post<GeneralReportResponse>("/Report/GeneralDailyReport", payload);                
+            }
+            //await JS.InvokeAsync<dynamic>("initReportDatatable", new dynamic[] {
+            //                     AuthService.userMTRedSun.Id, Configuration["ApiURL"],payload });
+
+            //var resp = await HttpService.Request("post", "/Report/GeneralDailyReportSum", payload);
+            LoadingReport = false;
+            isViewingReport = false;
+            //Table1 = resp.Content.ReportSummary;
+            if (resp.Status.ToString() == "200")
+            {
+                viewReport = true;
+                reportDetails = resp.Content.ReportDetail;
+                reportSummarys = resp.Content.ReportSummary;
+                if(reportDetails.Count>0)
+                {
+                    displayVerify = "initial";
+                }
+                else
+                {
+                    displayVerify = "None";
+                    toastService.ShowWarning("Nothing to view");
+                    viewReport = false;
+                }               
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+
+                viewReport = false;
+                displayVerify = "None";
+
+            }
+            //ReponseTables = Resp.Content.Table;
+            //Table1 = resp.Content.Table1;
+            //Table = resp.Content.Table;
+            //Table2 = resp.Content.Table2;
+            foreach (var item in reportSummarys)
+            {
+                totalRecords = Convert.ToInt64(item.NoofTran);
+            }
+            totalPages = (int)Math.Ceiling(totalRecords / (decimal)pageSize);
+        }
+        catch(Exception ex)
+        {
+            toastService.ShowError(ex.Message);
+        }
+        this.StateHasChanged();
+    }
+    protected async Task ChangepageSize(ChangeEventArgs e)
+    {
+        pageSize = Convert.ToInt64(e.Value.ToString());
+        curPage = 1;
+        pagerSize = 5;
+        startPage = 1;
+        endPage = 0;
+        await getData();
+        await SetPageSize("forward");
+        await refreshNoidung();
+        StateHasChanged();
+    }
+    private bool _jsInteropReady = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Ensure user is authenticated
+            await AuthService.Initialize();
+            if (AuthService.userMTRedSun == null)
+            {
+                await AuthService.Logout();
+                return;
+            }
+            else
+            {
+                menuChildLists = AuthService.userMTRedSun.MenuChildList.ToList();
+                if (menuChildLists.Count > 0)
+                {
+                    List<MenuChildList> menuChildList = new List<MenuChildList>();
+                    menuChildList = menuChildLists.Where(x => x.LinkPageColor == pagename).ToList();
+                    if (menuChildList.Count == 0)
+                    {
+                        toastService.ShowWarning("This function is not authorized!", "Warning");
+                        await AuthService.Logout();
+                    }
+                }
+
+                var dimension = await Service.GetDimensions();
+                Height = dimension.Height+78 - 430;
+                if (Height <= 200)
+                {
+                    Height = 200;
+                }
+                MaxHeight = Height.ToString() + "px"; HeightBody = dimension.Height - 63; MaxHeightBody = HeightBody.ToString() + "px";
+                curPage = 1;
+                pagerSize = 5;
+                pageSize = 50;
+
+                Users = AuthService.userMTRedSun.Users?.ToList() ?? new List<Users>();
+                Userss = Users.FirstOrDefault();
+                model.UserID = Userss?.UserID?.ToString() ?? "";
+
+                SendCountryList = AuthService.userMTRedSun.SendCountryList?.ToList() ?? new List<SendCountryList>();
+                SendCountryLists = SendCountryList.FirstOrDefault();
+                model.FromCountry = SendCountryLists?.CountryCode?.ToString() ?? "All";
+
+                ReceiveCountryList = AuthService.userMTRedSun.ReceiveCountryList?.ToList() ?? new List<ReceiveCountryList>();
+                ReceiveCountryLists = ReceiveCountryList.FirstOrDefault();
+                model.ToCountry = ReceiveCountryLists?.CountryCode?.ToString() ?? "All";
+
+                SendCurrencyList = AuthService.userMTRedSun.SendCurrencyList?.ToList() ?? new List<SendCurrencyList>();
+                SendCurrencyLists = SendCurrencyList.FirstOrDefault();
+                model.FromCurrency = SendCurrencyLists?.CurrencyCode?.ToString() ?? "All";
+
+                ReceiveCurrencyList = AuthService.userMTRedSun.ReceiveCurrencyList?.ToList() ?? new List<ReceiveCurrencyList>();
+                ReceiveCurrencyLists = ReceiveCurrencyList.FirstOrDefault();
+                model.ToCurrency = ReceiveCurrencyLists?.CurrencyCode?.ToString() ?? "All";
+
+                SearchList = AuthService.userMTRedSun.SearchList?.ToList() ?? new List<SearchList>();
+                SearchLists = SearchList.FirstOrDefault();
+                model.SearchBy = SearchLists?.SearchID?.ToString() ?? "All";
+
+                TypeTranList = AuthService.userMTRedSun.TypeTranList?.ToList() ?? new List<TypeTranList>();
+                TypeTranLists = TypeTranList.FirstOrDefault();
+                model.TypeTran = TypeTranLists?.TypeID?.ToString() ?? "All";
+
+                AgentList = AuthService.userMTRedSun.AgentList?.ToList() ?? new List<AgentList>();
+                AgentLists = AgentList.FirstOrDefault();
+                model.AgentID = AgentLists?.Agent_ID?.ToString() ?? "All";
+
+                StateList = AuthService.userMTRedSun.StateList?.ToList() ?? new List<StateList>();
+                StateLists = StateList.FirstOrDefault();
+                model.StateID = StateLists?.StateCode?.ToString() ?? "All";
+
+                PaymentAgentList = AuthService.userMTRedSun.PaymentAgentList?.ToList() ?? new List<PaymentAgentList>();
+                PaymentAgentLists = PaymentAgentList.FirstOrDefault();
+                model.PaymentAgent = PaymentAgentLists?.PAY_AG_ID?.ToString() ?? "All";
+
+                PaymentMethodList = AuthService.userMTRedSun.PaymentMethodReportList?.ToList() ?? new List<PaymentMethodList>();
+                PaymentMethodLists = PaymentMethodList.FirstOrDefault();
+                model.PaymentMethod = PaymentMethodLists?.PayTypeID?.ToString() ?? "All";
+
+                PaymentModeList = AuthService.userMTRedSun.PaymentMethodListAll?.ToList() ?? new List<TransTypeList>();
+                if (PaymentModeList.Count > 0)
+                {
+                    model.PaymentMode = PaymentModeList[0]?.PAYABLE_CODE?.ToString() ?? "All";
+                }
+            }
+        }
+        catch(Exception ex)
+        {
+            toastService.ShowError("Loi");
+        }
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Test if JavaScript interop is available
+                await JS.InvokeVoidAsync("console.log", "JavaScript interop ready");
+                _jsInteropReady = true;
+
+                // Initialize floating labels after first render
+                await JS.InvokeVoidAsync("initializeFloatingLabels");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"JavaScript interop not ready: {ex.Message}");
+                _jsInteropReady = false;
+            }
+        }
+        await base.OnAfterRenderAsync(firstRender);
+    }
+    protected async void PrintReport()
+    {
+
+            try
+            {
+                if (!_jsInteropReady)
+                {
+                    toastService.ShowWarning("JavaScript not ready. Please try again.");
+                    return;
+                }
+
+                string param = "fd=" + Convert.ToDateTime(model.FromDate).ToString("yyyy/MM/dd") + "&td=" + Convert.ToDateTime(model.ToDate).ToString("yyyy/MM/dd") + "&fc=" + model.FromCountry + "&tc=" + model.ToCountry + "&st=" + model.StateID + "&ag=" + model.AgentID;
+                param += "&fcu=" + model.FromCurrency + "&tcu=" + model.ToCurrency + "&fa=" + model.FromAmount + "&ta=" + model.ToAmount + "&s=" + model.SearchBy + "&cs=" + model.ContentSearch + "&pa=" + model.PaymentAgent + "&tt=" + model.TypeTran + "&pm=" + model.PaymentMethod;
+            string url = "/CrystalReport/GeneralReportPrint?" + param;
+                await JS.InvokeVoidAsync("openUrl", url, "_blank");
+            }
+            catch (Exception ex)
+            {
+                viewReport = false;
+            }
+
+            isViewingReport = false;
+            StateHasChanged();
+       
+    }
+    protected async void DownloadReport()
+    {
+        isDownload = true;
+        StateHasChanged();
+        try
+        {
+           
+            await getDataAllPrint();
+        }
+        catch (Exception ex)
+        {
+            isDownload = false;
+        }
+
+        isDownload = false;
+        StateHasChanged();
+    }
+
+    protected async void ViewReport()
+    {
+        try
+        {
+            curPage = 1;
+            pagerSize = 5;
+            startPage = 1;
+            endPage = 0;
+            isViewingReport = true;
+            Table1 = new Array[] { };
+            error = "";
+            StateHasChanged();
+            await getData();
+            await SetPageSize("forward");
+            await refreshNoidung();
+        }
+        catch (Exception ex)
+        {
+            viewReport = false;
+        }
+
+        isViewingReport = false;
+        StateHasChanged();
+    }
+    protected async void ExportExcel()
+    {
+        try
+        {
+            isExportExcel = true;
+            StateHasChanged();
+
+            dynamic payload = new
+            {
+                Form = "/Reports/GeneralDailyReport",
+                FormName = "General Daily Report",
+                Action = "Export Excel",
+                UserID = model.UserID,
+                FromDate = Convert.ToDateTime(Convert.ToDateTime(model.FromDate).ToString("yyyy/MM/dd") + " " + model.FromTime),
+                ToDate = Convert.ToDateTime(Convert.ToDateTime(model.ToDate).ToString("yyyy/MM/dd") + " " + model.ToTime),
+                FromCountry = model.FromCountry,
+                ToCountry = model.ToCountry,
+                StateID = model.StateID,
+                AgentID = model.AgentID,
+                FromCurrency = model.FromCurrency,
+                ToCurrency = model.ToCurrency,
+                FromAmount = model.FromAmount,
+                ToAmount = model.ToAmount,
+                SearchBy = model.SearchBy,
+                ContentSearch = model.ContentSearch,
+                PaymentAgent = model.PaymentAgent,
+                TypeTran = model.TypeTran,
+                PaymentMethod = model.PaymentMethod,
+                 PaymentMode = model.PaymentMode,
+                OptionView = "",
+                typeExport = "GeneralReport",
+                pageIndex = 1,
+                pageSize = 1000000
+            };
+
+            TransFileDownloadResp resp = await HttpService.Post<TransFileDownloadResp>("/ExportDataExcel/ExportDataExcelFile", payload);
+            //Table1 = resp.Content.ReportSummary;
+            if (resp.Status.ToString() == "200")
+            {
+                if (!_jsInteropReady)
+                {
+                    toastService.ShowWarning("JavaScript not ready for file download. Please try again.");
+                    return;
+                }
+
+                   // client.DownloadFile(resp.Content.LinkFile.ToString(), resp.Content.FileName.ToString());
+                //await JS.InvokeVoidAsync("triggerFileDownload", resp.Content.FileName.ToString(), resp.Content.LinkFile.ToString());
+                var fileStream = clsFunction.GetFileStream(resp.Content.FileLoad);
+                using var streamRef = new DotNetStreamReference(stream: fileStream);
+                await JS.InvokeVoidAsync("downloadFileFromStream", resp.Content.FileName.ToString(), streamRef);
+            }
+            else
+            {
+                if (resp.Status == 99)
+                {
+                    toastService.ShowWarning("User is not Exist or Expire");
+                    await AuthService.Logout();
+                }
+                else
+                {
+                    toastService.ShowWarning(resp.Message.ToString());
+                }
+                reportDetailsAll = new List<ReportDetail>();
+            }
+             toastService.ShowSuccess("Export data successful!");
+
+        }
+        catch (Exception ex)
+        {
+            isExportExcel = false;
+        }
+
+        isExportExcel = false;
+        StateHasChanged();
+    }
+    private Stream GetFileStream(byte[]? FileLoad)
+    {
+        try
+        {
+            var fileStream = new MemoryStream(FileLoad);
+            return fileStream;
+        }
+        catch (Exception ex)
+        {
+            return null;
+            error = ex.Message;
+            toastService.ShowError(ex.Message);
+        }
+    }
+}

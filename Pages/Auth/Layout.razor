@@ -1,0 +1,18 @@
+@inherits LayoutComponentBase
+@layout MainLayout
+@inject IAuthService AuthService
+@inject NavigationManager NavigationManager
+
+@Body
+
+@code {
+    protected override void OnInitialized()
+    {
+        // redirect to home if already logged in
+        //if (AuthService.User != null)
+        //{
+        //    NavigationManager.NavigateTo("");
+        //}
+        AuthService.Logout();
+    }
+}
